@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HomeOffice-Planer DRV Saarland</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#217A8D">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="HomeOffice-Planer">
+    
+    <!-- Firebase CDN -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+</head>
+<body>
+    <!-- Connection Status -->
+    <div id="connectionStatus" class="connection-status hidden">
+        <span class="status-offline">Offline - Keine Live-Updates</span>
+        <span class="status-online">Online - Live-Synchronisierung aktiv</span>
+    </div>
+
+    <div class="container">
+        <!-- Login Screen -->
+        <section class="login-screen" id="loginScreen">
+            <div class="card login-card">
+                <div class="card__body">
+                    <h1>HomeOffice-Planer DRV Saarland</h1>
+                    
+                    <!-- Login Type Selection -->
+                    <div id="loginTypeSelection">
+                        <div class="login-buttons">
+                            <button class="btn btn--primary btn--full-width" id="employeeBtn">👨‍💼 Kollege</button>
+                            <button class="btn btn--primary btn--full-width" id="teamleaderBtn">👨‍💼 Teamleiter</button>
+                            <button class="btn btn--outline btn--full-width" id="newEmployeeBtn">➕ Neuer Kollege</button>
+                        </div>
+                    </div>
+
+                    <!-- Employee Login Form -->
+                    <div id="employeeLoginForm" class="login-form hidden">
+                        <div class="form-group">
+                            <label for="employeeSelect" class="form-label">Name</label>
+                            <select id="employeeSelect" class="form-control">
+                                <option value="">-- Kollege auswählen --</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="employeePassword" class="form-label">Passwort</label>
+                            <input type="password" id="employeePassword" class="form-control" placeholder="Passwort eingeben">
+                        </div>
+                        <div class="login-actions">
+                            <button class="btn btn--primary btn--full-width" id="employeeLoginBtn">Anmelden</button>
+                            <button class="btn btn--outline btn--full-width" id="employeeBackBtn">Zurück</button>
+                        </div>
+                    </div>
+
+                    <!-- Teamleader Login Form -->
+                    <div id="teamleaderLoginForm" class="login-form hidden">
+                        <div class="form-group">
+                            <label for="teamleaderPassword" class="form-label">Teamleiter-Passwort</label>
+                            <input type="password" id="teamleaderPassword" class="form-control" placeholder="Passwort eingeben">
+                        </div>
+                        <div class="login-actions">
+                            <button class="btn btn--primary btn--full-width" id="teamleaderLoginBtn">Anmelden</button>
+                            <button class="btn btn--outline btn--full-width" id="teamleaderBackBtn">Zurück</button>
+                        </div>
+                    </div>
+
+                    <!-- New Employee Registration Form -->
+                    <div id="newEmployeeForm" class="login-form hidden">
+                        <div class="form-group">
+                            <label for="newEmployeeName" class="form-label">Name</label>
+                            <input type="text" id="newEmployeeName" class="form-control" placeholder="Vollständigen Namen eingeben">
+                        </div>
+                        <div class="form-group">
+                            <label for="newEmployeePassword" class="form-label">Passwort</label>
+                            <input type="password" id="newEmployeePassword" class="form-control" placeholder="Neues Passwort eingeben">
+                        </div>
+                        <div class="form-group">
+                            <label for="newEmployeePasswordConfirm" class="form-label">Passwort bestätigen</label>
+                            <input type="password" id="newEmployeePasswordConfirm" class="form-control" placeholder="Passwort wiederholen">
+                        </div>
+                        <div class="login-actions">
+                            <button class="btn btn--primary btn--full-width" id="newEmployeeRegisterBtn">Registrieren</button>
+                            <button class="btn btn--outline btn--full-width" id="newEmployeeBackBtn">Zurück</button>
+                        </div>
+                    </div>
+
+                    <div class="error-message hidden" id="errorMessage"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Dashboard Screen -->
+        <section class="dashboard-screen hidden" id="dashboardScreen">
+            <div class="dashboard-header">
+                <h2 id="dashboardTitle">Willkommen</h2>
+                <div class="dashboard-actions">
+                    <button class="btn btn--outline btn--sm" id="logoutBtn">Logout</button>
+                </div>
+            </div>
+
+            <!-- Controls -->
+            <div class="dashboard-controls">
+                <div class="control-group">
+                    <label for="quotaSelect" class="form-label">HomeOffice-Regel</label>
+                    <select id="quotaSelect" class="form-control form-control--sm">
+                        <option value="40">40% (Standard)</option>
+                        <option value="60">60% (Erweitert)</option>
+                    </select>
+                </div>
+                
+                <div class="control-group">
+                    <div class="quota-display" id="quotaDisplay">
+                        <span class="quota-label">Aktuelle Quote:</span>
+                        <span class="quota-value" id="quotaValue">0%</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="action-buttons">
+                <button class="btn btn--outline" id="teamOverviewBtn">Team-Übersicht</button>
+                <button class="btn btn--outline" id="changePasswordBtn">Passwort ändern</button>
+                <button class="btn btn--danger" id="deleteAccountBtn">Konto löschen</button>
+            </div>
+
+            <!-- Calendar -->
+            <div class="calendar-container">
+                <div class="calendar-header">
+                    <button class="btn btn--outline btn--sm" id="prevMonthBtn">‹</button>
+                    <h3 id="currentMonth"></h3>
+                    <button class="btn btn--outline btn--sm" id="nextMonthBtn">›</button>
+                </div>
+                <div class="calendar" id="calendar"></div>
+                <div class="calendar-legend">
+                    <div class="legend-item">🏠 Home-Office</div>
+                    <div class="legend-item">🏢 Büro</div>
+                    <div class="legend-item">🏖️ Urlaub</div>
+                    <div class="legend-item">⏰ AZ</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Team Overview Screen -->
+        <section class="team-overview-screen hidden" id="teamOverviewScreen">
+            <div class="team-header">
+                <button class="btn btn--outline btn--sm" id="backToMain">← Zurück</button>
+                <h2>Team-Übersicht</h2>
+            </div>
+            <div class="team-grid" id="teamGrid"></div>
+        </section>
+
+        <!-- Modals -->
+        <div class="modal hidden" id="passwordModal">
+            <div class="modal-content">
+                <h3>Passwort ändern</h3>
+                <div class="form-group">
+                    <label class="form-label">Aktuelles Passwort</label>
+                    <input type="password" id="currentPassword" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Neues Passwort</label>
+                    <input type="password" id="newPassword" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Neues Passwort bestätigen</label>
+                    <input type="password" id="confirmPassword" class="form-control">
+                </div>
+                <div class="modal-actions">
+                    <button class="btn btn--primary" id="savePasswordBtn">Speichern</button>
+                    <button class="btn btn--outline" id="cancelPasswordBtn">Abbrechen</button>
+                </div>
+            </div>
+        </div>
+
+        <footer class="footer">
+            <p>Design by Torsten Zapp 2025</p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
