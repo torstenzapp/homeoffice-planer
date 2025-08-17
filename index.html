@@ -1,281 +1,77 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HomeOffice-Planer</title>
-    <link rel="stylesheet" href="style.css">
-    
-    <!-- PWA Manifest -->
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#217A8D">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="HomeOffice-Planer">
-    
-    <!-- Firebase CDN -->
-    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database-compat.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HomeOffice-Planer</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#217A8D" />
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 </head>
 <body>
-    <!-- Header -->
-    <header class="header">
-        <div class="container">
-            <div class="header-content">
-                <h1 class="header-title">HomeOffice-Planer</h1>
-                <div class="header-actions" id="headerActions" style="display: none;">
-                    <button class="btn btn--secondary btn--sm" id="passwordChangeBtn">Passwort ändern</button>
-                    <button class="btn btn--secondary btn--sm" id="accountDeleteBtn">Account löschen</button>
-                    <button class="btn btn--outline btn--sm" id="logoutBtn">Logout</button>
-                </div>
-            </div>
-        </div>
-    </header>
+  <header class="main-header"><h1>🏠 HomeOffice-Planer</h1></header>
 
-    <!-- Main Content -->
-    <main class="main">
-        <div class="container">
-            <!-- Login Screen -->
-            <div id="loginScreen" class="login-screen">
-                <div class="login-card card">
-                    <div class="card__body">
-                        <h2 class="login-title">Anmeldung</h2>
-                        <div class="login-buttons">
-                            <button class="btn btn--primary btn--full-width" id="kollegeBtn">Kollege</button>
-                            <button class="btn btn--primary btn--full-width" id="teamleiterBtn">Teamleiter</button>
-                            <button class="btn btn--secondary btn--full-width" id="neuerKollegeBtn">Neuer Kollege</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
+  <!-- LOGIN SECTION -->
+  <section id="loginSection" class="card login-card">
+    <h2>Anmeldung</h2>
 
-            <!-- Password Input Modal -->
-            <div id="passwordModal" class="modal hidden">
-                <div class="modal-content card">
-                    <div class="card__body">
-                        <h3 id="passwordModalTitle">Passwort eingeben</h3>
-                        <div class="form-group">
-                            <input type="password" id="passwordInput" class="form-control" placeholder="Passwort eingeben">
-                        </div>
-                        <div class="modal-actions">
-                            <button class="btn btn--primary" id="passwordSubmitBtn">Anmelden</button>
-                            <button class="btn btn--outline" id="passwordCancelBtn">Abbrechen</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- New Colleague Registration Modal -->
-            <div id="registrationModal" class="modal hidden">
-                <div class="modal-content card">
-                    <div class="card__body">
-                        <h3>Neuer Kollege Registrierung</h3>
-                        <div class="form-group">
-                            <label class="form-label">Name</label>
-                            <input type="text" id="newColleagueName" class="form-control" placeholder="Vollständiger Name">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Passwort</label>
-                            <input type="password" id="newColleaguePassword" class="form-control" placeholder="Passwort">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Passwort bestätigen</label>
-                            <input type="password" id="newColleaguePasswordConfirm" class="form-control" placeholder="Passwort bestätigen">
-                        </div>
-                        <div class="modal-actions">
-                            <button class="btn btn--primary" id="registerSubmitBtn">Registrieren</button>
-                            <button class="btn btn--outline" id="registerCancelBtn">Abbrechen</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Password Change Modal -->
-            <div id="passwordChangeModal" class="modal hidden">
-                <div class="modal-content card">
-                    <div class="card__body">
-                        <h3>Passwort ändern</h3>
-                        <div class="form-group">
-                            <label class="form-label">Aktuelles Passwort</label>
-                            <input type="password" id="currentPassword" class="form-control" placeholder="Aktuelles Passwort">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Neues Passwort</label>
-                            <input type="password" id="newPassword" class="form-control" placeholder="Neues Passwort">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Neues Passwort bestätigen</label>
-                            <input type="password" id="newPasswordConfirm" class="form-control" placeholder="Neues Passwort bestätigen">
-                        </div>
-                        <div class="modal-actions">
-                            <button class="btn btn--primary" id="passwordChangeSubmitBtn">Ändern</button>
-                            <button class="btn btn--outline" id="passwordChangeCancelBtn">Abbrechen</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Account Delete Modal -->
-            <div id="accountDeleteModal" class="modal hidden">
-                <div class="modal-content card">
-                    <div class="card__body">
-                        <h3>Account löschen</h3>
-                        <p>Sind Sie sicher, dass Sie Ihren Account permanent löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.</p>
-                        <div class="form-group">
-                            <label class="form-label">Passwort bestätigen</label>
-                            <input type="password" id="deleteAccountPassword" class="form-control" placeholder="Passwort eingeben">
-                        </div>
-                        <div class="modal-actions">
-                            <button class="btn btn--error" id="accountDeleteConfirmBtn">Account löschen</button>
-                            <button class="btn btn--outline" id="accountDeleteCancelBtn">Abbrechen</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- App Screen -->
-            <div id="appScreen" class="app-screen hidden">
-                <!-- Welcome Section -->
-                <div class="welcome-section card">
-                    <div class="card__body">
-                        <h2>Willkommen, <span id="userName"></span>!</h2>
-                        <p id="userRole"></p>
-                    </div>
-                </div>
-
-                <!-- Navigation Tabs -->
-                <div class="nav-tabs">
-                    <button class="nav-tab active" data-tab="calendar">Kollegenkalender</button>
-                    <button class="nav-tab" data-tab="team" id="teamNavTab">Team Übersicht</button>
-                </div>
-
-                <!-- Calendar Tab -->
-                <div id="calendarTab" class="tab-content active">
-                    <div class="calendar-controls card">
-                        <div class="card__body">
-                            <div class="calendar-header">
-                                <button class="btn btn--outline btn--sm" id="prevMonth">‹</button>
-                                <h3 id="currentMonth"></h3>
-                                <button class="btn btn--outline btn--sm" id="nextMonth">›</button>
-                            </div>
-                            <div class="quota-controls">
-                                <div class="form-group">
-                                    <label class="form-label">Regel</label>
-                                    <select id="quotaRule" class="form-control">
-                                        <option value="40">40% HomeOffice</option>
-                                        <option value="60">60% HomeOffice</option>
-                                    </select>
-                                </div>
-                                <div class="quota-display">
-                                    <div class="quota-item">
-                                        <span class="quota-label">HO-Tage:</span>
-                                        <span id="homeOfficeDays" class="quota-value">0</span>
-                                    </div>
-                                    <div class="quota-item">
-                                        <span class="quota-label">Büro-Tage:</span>
-                                        <span id="officeDays" class="quota-value">0</span>
-                                    </div>
-                                    <div class="quota-item">
-                                        <span class="quota-label">Quote:</span>
-                                        <span id="quotaPercentage" class="quota-value status">0%</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="calendar-container card">
-                        <div class="card__body">
-                            <div class="calendar-grid">
-                                <div class="calendar-header-row">
-                                    <div class="calendar-day-header">Mo</div>
-                                    <div class="calendar-day-header">Di</div>
-                                    <div class="calendar-day-header">Mi</div>
-                                    <div class="calendar-day-header">Do</div>
-                                    <div class="calendar-day-header">Fr</div>
-                                    <div class="calendar-day-header">Sa</div>
-                                    <div class="calendar-day-header">So</div>
-                                </div>
-                                <div id="calendarDays" class="calendar-days"></div>
-                            </div>
-                            <div class="calendar-legend">
-                                <div class="legend-item">
-                                    <span class="legend-color legend-homeoffice"></span>
-                                    <span>HomeOffice</span>
-                                </div>
-                                <div class="legend-item">
-                                    <span class="legend-color legend-office"></span>
-                                    <span>Büro</span>
-                                </div>
-                                <div class="legend-item">
-                                    <span class="legend-color legend-holiday"></span>
-                                    <span>Feiertag</span>
-                                </div>
-                                <div class="legend-item">
-                                    <span class="legend-color legend-weekend"></span>
-                                    <span>Wochenende</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Team Tab -->
-                <div id="teamTab" class="tab-content hidden">
-                    <div class="team-overview">
-                        <div class="team-controls card" id="teamControls" style="display: none;">
-                            <div class="card__body">
-                                <h3>Teamleiter Funktionen</h3>
-                                <div class="team-actions">
-                                    <button class="btn btn--secondary" id="resetColleagueBtn">Kollege zurücksetzen</button>
-                                </div>
-                            </div>
-                        </div>
-                        <div id="teamList" class="team-list"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Reset Colleague Modal -->
-            <div id="resetColleagueModal" class="modal hidden">
-                <div class="modal-content card">
-                    <div class="card__body">
-                        <h3>Kollege zurücksetzen</h3>
-                        <div class="form-group">
-                            <label class="form-label">Kollege auswählen</label>
-                            <select id="resetColleagueSelect" class="form-control">
-                                <option value="">Kollege wählen...</option>
-                            </select>
-                        </div>
-                        <div class="modal-actions">
-                            <button class="btn btn--warning" id="resetColleagueConfirmBtn">Zurücksetzen</button>
-                            <button class="btn btn--outline" id="resetColleagueCancelBtn">Abbrechen</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </main>
-
-    <!-- Footer -->
-    <footer class="footer">
-        <div class="container">
-            <p class="footer-text">Design by Torsten Zapp 2025</p>
-        </div>
-    </footer>
-
-    <!-- PWA Install Prompt -->
-    <div id="installPrompt" class="install-prompt hidden">
-        <div class="install-prompt-content">
-            <p>HomeOffice-Planer als App installieren?</p>
-            <div class="install-prompt-actions">
-                <button class="btn btn--primary btn--sm" id="installBtn">Installieren</button>
-                <button class="btn btn--outline btn--sm" id="dismissInstallBtn">Später</button>
-            </div>
-        </div>
+    <!-- ROLE SELECTOR -->
+    <div id="roleSelectWrap">
+      <p>Bitte wählen:</p>
+      <div class="role-buttons">
+        <button id="roleEmployee" class="btn btn-primary full-width">Kollege</button>
+        <button id="roleLeader" class="btn btn-outline full-width">Teamleiter</button>
+        <button id="roleNew" class="btn btn-outline full-width">Neuer Kollege</button>
+      </div>
     </div>
 
-    <script src="app.js"></script>
+    <!-- EMPLOYEE LOGIN FORM -->
+    <div id="employeeForm" class="hidden">
+      <div class="form-group">
+        <label for="empName">Name</label>
+        <select id="empName" class="form-control"></select>
+      </div>
+      <div class="form-group">
+        <label for="empPw">Passwort</label>
+        <input id="empPw" type="password" class="form-control" />
+      </div>
+      <button id="empLoginBtn" class="btn btn-primary full-width">Anmelden</button>
+      <button id="back1" class="btn btn-outline full-width">Zurück</button>
+    </div>
+
+    <!-- LEADER LOGIN FORM -->
+    <div id="leaderForm" class="hidden">
+      <div class="form-group">
+        <label for="leadPw">Teamleiter-Passwort</label>
+        <input id="leadPw" type="password" class="form-control" />
+      </div>
+      <button id="leadLoginBtn" class="btn btn-primary full-width">Anmelden</button>
+      <button id="back2" class="btn btn-outline full-width">Zurück</button>
+    </div>
+
+    <!-- NEW EMPLOYEE REG -->
+    <div id="newForm" class="hidden">
+      <div class="form-group"><label for="newName">Name</label><input id="newName" class="form-control" /></div>
+      <div class="form-group"><label for="newPw1">Passwort</label><input id="newPw1" type="password" class="form-control" /></div>
+      <div class="form-group"><label for="newPw2">Passwort bestätigen</label><input id="newPw2" type="password" class="form-control" /></div>
+      <button id="newRegBtn" class="btn btn-primary full-width">Registrieren</button>
+      <button id="back3" class="btn btn-outline full-width">Zurück</button>
+    </div>
+
+    <p id="loginError" class="error hidden"></p>
+  </section>
+
+  <!-- DASHBOARD SECTION -->
+  <section id="dashboard" class="hidden">
+    <div class="dash-header"><h2 id="dashTitle"></h2><button id="logoutBtn" class="btn btn-outline">Logout</button></div>
+    <div class="dash-controls"><label>HO-Regel <select id="quotaSel" class="form-control-sm"><option value="40">40%</option><option value="60">60%</option></select></label><span id="quotaDisp" class="quota">0%</span></div>
+    <div id="calendar" class="calendar card"></div>
+    <div class="actions"><button id="teamBtn" class="btn btn-outline">Team-Übersicht</button></div>
+  </section>
+
+  <footer class="main-footer">Design by Torsten Zapp 2025</footer>
+  <script src="app.js"></script>
 </body>
 </html>
