@@ -555,25 +555,56 @@ class HomeOfficePlanner {
       opt.value = c; opt.textContent = c; select.appendChild(opt);
     });
   }
-
-  async loginAsEmployee() {
-    const employeeName = document.getElementById("employeeName");
-    const employeePassword = document.getElementById("employeePassword");
-    if (!employeeName?.value) return alert("Bitte wählen Sie einen Kollegen aus.");
-    if (!employeePassword?.value) return alert("Bitte geben Sie ein Passwort ein.");
-
-    const hashed = await this.sha256Hash(employeePassword.value);
-    const stored = this.colleaguePasswords[employeeName.value];
-    if (hashed !== stored) return alert("Falsches Passwort!");
-
-    this.currentUser = employeeName.value;
-    this.currentUserUID = this.getUserUID(this.currentUser);
-    this.userRole = "employee";
-    await this.setupDataListeners(this.currentUserUID);
-    this.showMainApplication();
+  // Lies Hash aus Firebase (falls vorhanden); Fallback: lokal
+async getStoredPasswordHash(name) {
+  if (!this.isFirebaseEnabled || !name) return null;
+  try {
+    const { ref, get } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js");
+    const uid = this.getUserUID(name);
+    const profileRef = ref(this.database, `users/${uid}/profile`);
+    const snap = await get(profileRef);
+    const data = snap.val();
+    return data?.passwordHash || null;
+  } catch (e) {
+    console.warn("getStoredPasswordHash failed:", e);
+    return null;
   }
+}
 
-  async loginAsTeamleader() {
+async loginAsEmployee() {
+  const employeeName = document.getElementById("employeeName");
+  const employeePassword = document.getElementById("employeePassword");
+  if (!employeeName?.value) return alert("Bitte wählen Sie einen Kollegen aus.");
+  if (!employeePassword?.value) return alert("Bitte geben Sie ein Passwort ein.");
+
+  const name = employeeName.value;
+  const input = employeePassword.value;
+
+  // 1) SHA-256 des eingegebenen Passworts
+  const sha = await this.sha256Hash(input);
+
+  // 2) Hash aus Firebase (falls vorhanden) – sonst lokal
+  let stored = await this.getStoredPasswordHash(name);
+  if (!stored) stored = this.colleaguePasswords[name] || null;
+
+  // 3) Prüfen gegen SHA-256 ODER (Fallback) altes simpleHash
+  let ok = false;
+  if (stored) {
+    const isSha = /^[0-9a-f]{64}$/i.test(stored);
+    ok = isSha ? (sha === stored) : (this.simpleHash(input) === stored);
+  }
+  if (!ok) return alert("Falsches Passwort!");
+
+  // 4) Migration: wenn alter simpleHash in DB, direkt auf SHA-256 umstellen
+  try {
+    const wasSimple = stored && !/^[0-9a-f]{64}$/i.test(stored);
+    if (this.isFirebaseEnabled && wasSimple) {
+      await this.saveUserProfile(name, {
+        role: "employee",
+        quota: this.homeofficeRules[name] || 40,
+        passwordHash: sha
+      });
+      this.colleaguePasswords[name] =
     const teamleaderPassword = document.getElementById("teamleaderPassword");
     if (!teamleaderPassword?.value) return alert("Bitte geben Sie das Teamleiter-Passwort ein.");
     if (teamleaderPassword.value !== this.teamleaderPassword) return alert("Falsches Teamleiter-Passwort!");
@@ -875,294 +906,3 @@ class HomeOfficePlanner {
       } else if (this.userRole === "teamleader") {
         dayDiv.classList.add("readonly");
         this.colleagues.forEach((c) => {
-          const status = this.getStatus(c, dateStr);
-          if (status) {
-            const s = document.createElement("div"); s.className = `day-status ${status}`; s.style.fontSize = "9px"; s.style.marginBottom = "1px"; s.textContent = `${c.substr(0,3)}: ${this.statusTypes[status].symbol}`; dayDiv.appendChild(s);
-          }
-        });
-      }
-    }
-    return dayDiv;
-  }
-
-  formatDate(date) {
-    return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-  }
-
-  getHoliday(dateStr) {
-    const y = dateStr.split("-")[0];
-    const list = this.holidays[y] || [];
-    return list.find((h) => h.datum === dateStr);
-  }
-
-  getStatus(colleague, date) {
-    return this.planningData[colleague]?.[date];
-  }
-
-  showStatusModal(dateStr) {
-    if (this.userRole !== "employee") return;
-    this.selectedDateForStatus = dateStr;
-    const date = new Date(dateStr);
-    const formatted = date.toLocaleDateString("de-DE", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
-    const elDate = document.getElementById("statusModalDate");
-    const modal = document.getElementById("statusModal");
-    if (elDate) elDate.textContent = formatted;
-    if (modal) modal.classList.remove("hidden");
-  }
-
-  hideStatusModal() {
-    const modal = document.getElementById("statusModal");
-    if (modal) modal.classList.add("hidden");
-    this.selectedDateForStatus = null;
-  }
-
-  hideAllModals() {
-    document.querySelectorAll(".modal").forEach((m) => m.classList.add("hidden"));
-  }
-
-  showChangePasswordModal() {
-    const modal = document.getElementById("changePasswordModal");
-    ["oldPassword","newPassword","confirmNewPassword"].forEach((id) => { const el = document.getElementById(id); if (el) el.value = ""; });
-    if (modal) modal.classList.remove("hidden");
-    const oldEl = document.getElementById("oldPassword"); if (oldEl) oldEl.focus();
-  }
-
-  hideChangePasswordModal() { const modal = document.getElementById("changePasswordModal"); if (modal) modal.classList.add("hidden"); }
-  showDeleteAccountModal() { const modal = document.getElementById("deleteAccountModal"); if (modal) modal.classList.remove("hidden"); }
-  hideDeleteAccountModal() { const modal = document.getElementById("deleteAccountModal"); if (modal) modal.classList.add("hidden"); }
-
-  updateDashboard(colleague) {
-    if (!colleague) return;
-    const stats = this.calculateMonthlyStats(colleague);
-    const rule = this.homeofficeRules[colleague] || 40;
-
-    const progressFill = document.getElementById("progressFill");
-    const percentSpan = document.getElementById("homeofficePercent");
-    const statTarget = document.getElementById("statTarget");
-
-    if (progressFill) {
-      progressFill.style.width = `${Math.min(stats.homeofficePercent, 100)}%`;
-      progressFill.className = "progress-fill";
-      if (stats.homeofficePercent > rule + 10) progressFill.classList.add("danger");
-      else if (stats.homeofficePercent > rule) progressFill.classList.add("warning");
-    }
-    if (percentSpan) percentSpan.textContent = `${stats.homeofficePercent.toFixed(1)}%`;
-    if (statTarget) statTarget.textContent = `Ziel: ≤ ${rule}%`;
-
-    const map = {
-      workDays: stats.totalWorkDays,
-      homeOfficeDays: stats.homeofficeDays,
-      officeDays: stats.officeDays,
-      vacationDays: stats.vacationDays
-    };
-    for (const id in map) { const el = document.getElementById(id); if (el) el.textContent = map[id]; }
-
-    const warn = document.getElementById("warningMessage");
-    const warnText = document.getElementById("warningText");
-    if (warn && warnText) {
-      if (stats.homeofficePercent > rule) { warn.style.display = "block"; warnText.textContent = `Die ${rule}%-HomeOffice-Regel wird überschritten!`; }
-      else warn.style.display = "none";
-    }
-  }
-
-  // Punkt 7: Urlaub NICHT in totalWorkDays mitzählen (unverändert)
-  calculateMonthlyStats(colleague) {
-    const year = this.currentDate.getFullYear();
-    const month = this.currentDate.getMonth();
-    let homeofficeDays = 0, officeDays = 0, vacationDays = 0, azDays = 0, totalWorkDays = 0;
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    for (let date = new Date(firstDay); date <= lastDay; date.setDate(date.getDate() + 1)) {
-      const dateStr = this.formatDate(date);
-      const isWeekend = date.getDay() === 0 || date.getDay() === 6;
-      const isHoliday = this.getHoliday(dateStr);
-      if (!isWeekend && !isHoliday) {
-        const status = this.getStatus(colleague, dateStr);
-        if (status === "urlaub") vacationDays++;
-        else {
-          totalWorkDays++;
-          switch (status) {
-            case "homeoffice": homeofficeDays++; break;
-            case "buero": officeDays++; break;
-            case "az": azDays++; break;
-          }
-        }
-      }
-    }
-    const homeofficePercent = totalWorkDays > 0 ? (homeofficeDays / totalWorkDays) * 100 : 0;
-    return { homeofficeDays, officeDays, vacationDays, azDays, totalWorkDays, homeofficePercent };
-  }
-
-  switchTab(tab) {
-    this.activeTab = tab;
-    document.querySelectorAll(".nav-tab").forEach((t) => t.classList.toggle("active", t.dataset.tab === tab));
-    document.querySelectorAll(".tab-content").forEach((c) => c.classList.toggle("active", c.id === `${tab}Tab`));
-    if (tab === "overview") this.renderTeamOverview();
-    else if (tab === "details") this.populateDetailColleagueSelect();
-    else if (tab === "reports") this.generateReportPreview();
-  }
-
-  populateDetailColleagueSelect() {
-    const select = document.getElementById("detailColleagueSelect");
-    if (!select) return;
-    select.innerHTML = '<option value="">-- Kollege auswählen --</option>';
-    this.colleagues.forEach((c) => { const o = document.createElement("option"); o.value = c; o.textContent = c; select.appendChild(o); });
-  }
-
-  renderTeamOverview() {
-    const container = document.getElementById("teamOverviewTable");
-    const statusFilter = document.getElementById("statusFilter");
-    if (!container) return;
-    const filterValue = statusFilter ? statusFilter.value : "all";
-
-    const table = document.createElement("table");
-    table.className = "overview-table";
-    table.innerHTML = `
-      <thead>
-        <tr>
-          <th>Name</th><th>HomeOffice-Regel</th><th>Aktuelle Quote</th><th>Status</th>
-          <th>HomeOffice Tage</th><th>Büro Tage</th><th>Urlaub Tage</th>
-        </tr>
-      </thead>
-      <tbody></tbody>`;
-    const tbody = table.querySelector("tbody");
-
-    this.colleagues.forEach((c) => {
-      const stats = this.calculateMonthlyStats(c);
-      const rule = this.homeofficeRules[c] || 40;
-      if (filterValue === "violations" && stats.homeofficePercent <= rule) return;
-      if (filterValue === "40" && rule !== 40) return;
-      if (filterValue === "60" && rule !== 60) return;
-      const tr = document.createElement("tr");
-      const statusClass = stats.homeofficePercent > rule ? "status-danger" : "status-ok";
-      const statusText = stats.homeofficePercent > rule ? "Überschreitung" : "OK";
-      tr.innerHTML = `
-        <td><strong>${c}</strong></td>
-        <td>${rule}%</td>
-        <td>${stats.homeofficePercent.toFixed(1)}%</td>
-        <td><span class="${statusClass}">${statusText}</span></td>
-        <td>${stats.homeofficeDays}</td>
-        <td>${stats.officeDays}</td>
-        <td>${stats.vacationDays}</td>`;
-      tbody.appendChild(tr);
-    });
-
-    container.innerHTML = "";
-    container.appendChild(table);
-  }
-
-  showColleagueDetail(name) {
-    const detail = document.getElementById("colleagueDetail");
-    if (!detail || !name) { if (detail) detail.classList.add("hidden"); return; }
-    const stats = this.calculateMonthlyStats(name);
-    const rule = this.homeofficeRules[name] || 40;
-    detail.innerHTML = `
-      <h4>${name} - Detailansicht</h4>
-      <div class="detail-stats">
-        <div class="detail-stat-card"><h5>HomeOffice Regel</h5><div class="stat-value">${rule}%</div></div>
-        <div class="detail-stat-card"><h5>HomeOffice Quote</h5><div class="stat-value ${stats.homeofficePercent > rule ? 'status-warning' : 'status-ok'}">${stats.homeofficePercent.toFixed(1)}%</div></div>
-        <div class="detail-stat-card"><h5>HomeOffice Tage</h5><div class="stat-value">${stats.homeofficeDays}</div></div>
-        <div class="detail-stat-card"><h5>Büro Tage</h5><div class="stat-value">${stats.officeDays}</div></div>
-        <div class="detail-stat-card"><h5>Urlaub Tage</h5><div class="stat-value">${stats.vacationDays}</div></div>
-        <div class="detail-stat-card"><h5>Gesamt Arbeitstage</h5><div class="stat-value">${stats.totalWorkDays}</div></div>
-      </div>
-      <div class="detail-actions">
-        <button class="btn btn--warning btn--sm" onclick="window.planner.showResetPasswordModal('${name}')">Passwort zurücksetzen</button>
-        <button class="btn btn--danger btn--sm" onclick="window.planner.showDeleteColleagueModal('${name}')">Kollegen löschen</button>
-      </div>`;
-    detail.classList.remove("hidden");
-  }
-
-  showResetPasswordModal(colleague) {
-    this.selectedColleagueForAction = colleague;
-    const modal = document.getElementById("resetPasswordModal");
-    const span = document.getElementById("resetPasswordColleague");
-    if (span) span.textContent = colleague;
-    if (modal) modal.classList.remove("hidden");
-  }
-  hideResetPasswordModal() { const modal = document.getElementById("resetPasswordModal"); if (modal) modal.classList.add("hidden"); this.selectedColleagueForAction = null; }
-
-  async resetColleaguePassword() {
-    if (!this.selectedColleagueForAction) return;
-    const newHash = await this.sha256Hash(this.newPasswordDefault);
-    this.colleaguePasswords[this.selectedColleagueForAction] = newHash;
-    await this.saveUserProfile(this.selectedColleagueForAction, { role: "employee", quota: this.homeofficeRules[this.selectedColleagueForAction], passwordHash: newHash });
-    this.hideResetPasswordModal();
-    alert(`Passwort für ${this.selectedColleagueForAction} wurde auf "${this.newPasswordDefault}" zurückgesetzt.`);
-  }
-
-  showDeleteColleagueModal(colleague) {
-    this.selectedColleagueForAction = colleague;
-    const modal = document.getElementById("deleteColleagueModal");
-    const span = document.getElementById("deleteColleagueName");
-    if (span) span.textContent = colleague;
-    if (modal) modal.classList.remove("hidden");
-  }
-  hideDeleteColleagueModal() { const modal = document.getElementById("deleteColleagueModal"); if (modal) modal.classList.add("hidden"); this.selectedColleagueForAction = null; }
-
-  async deleteColleague() {
-    if (!this.selectedColleagueForAction) return;
-    const c = this.selectedColleagueForAction;
-    const idx = this.colleagues.indexOf(c); if (idx > -1) this.colleagues.splice(idx, 1);
-    delete this.planningData[c];
-    delete this.colleaguePasswords[c];
-    delete this.homeofficeRules[c];
-    const uid = this.getUserUID(c);
-    await this.removeData(`users/${uid}`);
-    await this.removeData(`plans/${uid}`);
-    this.populateDetailColleagueSelect();
-    this.renderTeamOverview();
-    const detailSelect = document.getElementById("detailColleagueSelect");
-    if (detailSelect && detailSelect.value === c) { detailSelect.value = ""; this.showColleagueDetail(""); }
-    this.hideDeleteColleagueModal();
-    alert(`Kollege ${c} wurde erfolgreich gelöscht.`);
-  }
-
-  generateReportPreview() {
-    const container = document.getElementById("reportPreview");
-    if (!container) return;
-    const m = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
-    const curM = m[this.currentDate.getMonth()];
-    const curY = this.currentDate.getFullYear();
-    let report = `HomeOffice Monatsbericht - ${curM} ${curY}\n`;
-    report += `====================================================\n\n`;
-    this.colleagues.forEach((c) => {
-      const s = this.calculateMonthlyStats(c);
-      const rule = this.homeofficeRules[c] || 40;
-      report += `${c}:\n`;
-      report += `  HomeOffice-Regel: ${rule}%\n`;
-      report += `  HomeOffice-Quote: ${s.homeofficePercent.toFixed(1)}%\n`;
-      report += `  HomeOffice Tage: ${s.homeofficeDays}\n`;
-      report += `  Büro Tage: ${s.officeDays}\n`;
-      report += `  Urlaub Tage: ${s.vacationDays}\n`;
-      report += `  Status: ${s.homeofficePercent > rule ? 'ÜBERSCHREITUNG' : 'OK'}\n\n`;
-    });
-    const totalViolations = this.colleagues.filter((c) => {
-      const s = this.calculateMonthlyStats(c);
-      const rule = this.homeofficeRules[c] || 40;
-      return s.homeofficePercent > rule;
-    }).length;
-    report += `Zusammenfassung:\n`;
-    report += `- Anzahl Kollegen: ${this.colleagues.length}\n`;
-    report += `- Überschreitungen: ${totalViolations}\n`;
-    report += `- Bericht erstellt: ${new Date().toLocaleString('de-DE')}\n`;
-    container.textContent = report;
-  }
-
-  exportMonthReport() {
-    this.generateReportPreview();
-    const content = document.getElementById("reportPreview").textContent;
-    const blob = new Blob([content], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    const m = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
-    const fileName = `HomeOffice-Bericht-${m[this.currentDate.getMonth()]}-${this.currentDate.getFullYear()}.txt`;
-    a.href = url; a.download = fileName; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
-  }
-}
-
-// App starten
-document.addEventListener("DOMContentLoaded", () => {
-  window.planner = new HomeOfficePlanner();
-  window.planner.init().catch((e) => console.error("Failed to initialize app:", e));
-});
