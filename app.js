@@ -129,21 +129,35 @@ class HomeOfficePlanner {
     
     async initializeFirebase() {
         try {
-            if (window.firebaseDB && window.firebaseDB.ref) {
-                this.database = window.firebaseDB;
-                this.isFirebaseEnabled = true;
+            // Add a timeout for Firebase initialization
+            const timeout = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Firebase initialization timeout')), 5000)
+            );
+
+            const firebaseCheck = new Promise((resolve) => {
+                if (window.firebaseDB && typeof window.firebaseDB === 'object') {
+                    this.database = window.firebaseDB;
+                    this.isFirebaseEnabled = true;
+                    resolve(true);
+                } else {
+                    resolve(false);
+                }
+            });
+
+            const result = await Promise.race([firebaseCheck, timeout]);
+            
+            if (result && this.isFirebaseEnabled) {
                 await this.setupConnectionMonitoring();
                 this.updateConnectionStatus('🟢 Firebase verbunden');
                 console.log('Firebase successfully initialized');
                 return true;
             } else {
-                console.log('Firebase not available - using local mode');
-                this.updateConnectionStatus('🔴 Offline Modus');
-                return false;
+                throw new Error('Firebase not available');
             }
         } catch (error) {
-            console.error('Firebase initialization failed:', error);
-            this.updateConnectionStatus('🔴 Verbindungsfehler');
+            console.log('Firebase not available - using local mode:', error.message);
+            this.isFirebaseEnabled = false;
+            this.updateConnectionStatus('🔴 Offline Modus');
             return false;
         }
     }
@@ -153,7 +167,7 @@ class HomeOfficePlanner {
 
         try {
             // Import Firebase functions dynamically
-            const { ref, onValue, serverTimestamp } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js');
+            const { ref, onValue } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js');
             
             // Monitor connection status
             const connectedRef = ref(this.database, '.info/connected');
@@ -166,6 +180,7 @@ class HomeOfficePlanner {
             });
         } catch (error) {
             console.error('Connection monitoring setup failed:', error);
+            this.updateLiveStatus('🔴 Offline');
         }
     }
 
@@ -186,10 +201,15 @@ class HomeOfficePlanner {
     // SHA-256 Hash function
     async sha256Hash(message) {
         if (typeof window !== 'undefined' && window.crypto && window.crypto.subtle) {
-            const msgBuffer = new TextEncoder().encode(message);
-            const hashBuffer = await window.crypto.subtle.digest('SHA-256', msgBuffer);
-            const hashArray = Array.from(new Uint8Array(hashBuffer));
-            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+            try {
+                const msgBuffer = new TextEncoder().encode(message);
+                const hashBuffer = await window.crypto.subtle.digest('SHA-256', msgBuffer);
+                const hashArray = Array.from(new Uint8Array(hashBuffer));
+                return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+            } catch (error) {
+                console.warn('SHA-256 not available, using fallback:', error);
+                return this.simpleHash(message);
+            }
         } else {
             // Fallback for environments without crypto.subtle
             return this.simpleHash(message);
@@ -458,21 +478,46 @@ class HomeOfficePlanner {
     }
 
     async init() {
-        await this.initializeFirebase();
-        this.showLoginScreen();
-        this.setupEventListeners();
-        this.populateEmployeeSelect();
+        console.log('Initializing HomeOffice Planner...');
+        
+        // Wait for DOM to be ready
+        if (document.readyState === 'loading') {
+            await new Promise(resolve => {
+                document.addEventListener('DOMContentLoaded', resolve);
+            });
+        }
+
+        try {
+            // Initialize Firebase with timeout
+            await this.initializeFirebase();
+            
+            // Setup UI
+            this.showLoginScreen();
+            this.populateEmployeeSelect();
+            this.setupEventListeners();
+            
+            console.log('HomeOffice Planner initialized successfully');
+        } catch (error) {
+            console.error('Failed to initialize HomeOffice Planner:', error);
+            this.updateConnectionStatus('🔴 Initialisierungsfehler');
+        }
     }
 
     setupEventListeners() {
-        this.setupLoginListeners();
-        this.setupNavigationListeners();
-        this.setupModalListeners();
-        this.setupTeamleaderListeners();
-        this.setupPasswordListeners();
-        this.setupDeleteAccountListeners();
-        this.setupHomeofficeRuleListeners();
-        this.setupTeamOverviewListeners();
+        console.log('Setting up event listeners...');
+        
+        // Use setTimeout to ensure DOM is ready
+        setTimeout(() => {
+            this.setupLoginListeners();
+            this.setupNavigationListeners();
+            this.setupModalListeners();
+            this.setupTeamleaderListeners();
+            this.setupPasswordListeners();
+            this.setupDeleteAccountListeners();
+            this.setupHomeofficeRuleListeners();
+            this.setupTeamOverviewListeners();
+            console.log('Event listeners setup complete');
+        }, 100);
     }
 
     setupLoginListeners() {
@@ -481,8 +526,20 @@ class HomeOfficePlanner {
         const teamleaderLoginBtn = document.getElementById('teamleaderLoginBtn');
         const newEmployeeRegisterBtn = document.getElementById('newEmployeeRegisterBtn');
 
+        console.log('Setting up login listeners...', {
+            userTypeSelect: !!userTypeSelect,
+            employeeLoginBtn: !!employeeLoginBtn,
+            teamleaderLoginBtn: !!teamleaderLoginBtn,
+            newEmployeeRegisterBtn: !!newEmployeeRegisterBtn
+        });
+
         if (userTypeSelect) {
-            userTypeSelect.addEventListener('change', (e) => {
+            // Remove any existing listeners
+            const newSelect = userTypeSelect.cloneNode(true);
+            userTypeSelect.parentNode.replaceChild(newSelect, userTypeSelect);
+            
+            newSelect.addEventListener('change', (e) => {
+                console.log('User type changed:', e.target.value);
                 this.showLoginType(e.target.value);
             });
         }
@@ -490,6 +547,7 @@ class HomeOfficePlanner {
         if (employeeLoginBtn) {
             employeeLoginBtn.addEventListener('click', (e) => {
                 e.preventDefault();
+                console.log('Employee login clicked');
                 this.loginAsEmployee();
             });
         }
@@ -497,6 +555,7 @@ class HomeOfficePlanner {
         if (teamleaderLoginBtn) {
             teamleaderLoginBtn.addEventListener('click', (e) => {
                 e.preventDefault();
+                console.log('Teamleader login clicked');
                 this.loginAsTeamleader();
             });
         }
@@ -504,6 +563,7 @@ class HomeOfficePlanner {
         if (newEmployeeRegisterBtn) {
             newEmployeeRegisterBtn.addEventListener('click', (e) => {
                 e.preventDefault();
+                console.log('New employee register clicked');
                 this.registerNewEmployee();
             });
         }
@@ -771,34 +831,48 @@ class HomeOfficePlanner {
     }
 
     showLoginScreen() {
+        console.log('Showing login screen...');
         const loginScreen = document.getElementById('loginScreen');
         const mainApp = document.getElementById('mainApp');
         
-        if (loginScreen) loginScreen.classList.remove('hidden');
+        if (loginScreen) {
+            loginScreen.classList.remove('hidden');
+            console.log('Login screen shown');
+        }
         if (mainApp) mainApp.classList.add('hidden');
     }
 
     showLoginType(type) {
+        console.log('Showing login type:', type);
         const employeeLogin = document.getElementById('employeeLogin');
         const teamleaderLogin = document.getElementById('teamleaderLogin');
         const newEmployeeLogin = document.getElementById('newEmployeeLogin');
 
+        // Hide all first
         if (employeeLogin) employeeLogin.classList.add('hidden');
         if (teamleaderLogin) teamleaderLogin.classList.add('hidden');
         if (newEmployeeLogin) newEmployeeLogin.classList.add('hidden');
 
+        // Show the selected type
         if (type === 'employee' && employeeLogin) {
             employeeLogin.classList.remove('hidden');
+            console.log('Employee login shown');
         } else if (type === 'teamleader' && teamleaderLogin) {
             teamleaderLogin.classList.remove('hidden');
+            console.log('Teamleader login shown');
         } else if (type === 'newEmployee' && newEmployeeLogin) {
             newEmployeeLogin.classList.remove('hidden');
+            console.log('New employee login shown');
         }
     }
 
     populateEmployeeSelect() {
+        console.log('Populating employee select...');
         const select = document.getElementById('employeeName');
-        if (!select) return;
+        if (!select) {
+            console.warn('Employee select not found');
+            return;
+        }
         
         select.innerHTML = '<option value="">-- Kollege auswählen --</option>';
         
@@ -808,11 +882,15 @@ class HomeOfficePlanner {
             option.textContent = colleague;
             select.appendChild(option);
         });
+        
+        console.log('Employee select populated with', this.colleagues.length, 'colleagues');
     }
 
     async loginAsEmployee() {
         const employeeName = document.getElementById('employeeName');
         const employeePassword = document.getElementById('employeePassword');
+        
+        console.log('Attempting employee login...');
         
         if (!employeeName || !employeeName.value) {
             alert('Bitte wählen Sie einen Kollegen aus.');
@@ -836,14 +914,18 @@ class HomeOfficePlanner {
         this.currentUserUID = this.getUserUID(this.currentUser);
         this.userRole = 'employee';
         
+        console.log('Employee login successful:', this.currentUser);
+        
         // Setup Firebase listeners for this user
         await this.setupDataListeners(this.currentUserUID);
         
         this.showMainApplication();
     }
 
-    loginAsTeamleader() {
+    async loginAsTeamleader() {
         const teamleaderPassword = document.getElementById('teamleaderPassword');
+        
+        console.log('Attempting teamleader login...');
         
         if (!teamleaderPassword || !teamleaderPassword.value) {
             alert('Bitte geben Sie das Teamleiter-Passwort ein.');
@@ -857,6 +939,12 @@ class HomeOfficePlanner {
 
         this.currentUser = "Teamleiter";
         this.userRole = 'teamleader';
+        
+        console.log('Teamleader login successful');
+        
+        // Setup Firebase listeners for teamleader
+        await this.setupTeamDataListeners();
+        
         this.showMainApplication();
     }
 
@@ -864,6 +952,8 @@ class HomeOfficePlanner {
         const newEmployeeName = document.getElementById('newEmployeeName');
         const newEmployeePassword = document.getElementById('newEmployeePassword');
         const newEmployeePasswordConfirm = document.getElementById('newEmployeePasswordConfirm');
+        
+        console.log('Attempting new employee registration...');
         
         if (!newEmployeeName || !newEmployeeName.value.trim()) {
             alert('Bitte geben Sie einen Namen ein.');
@@ -917,6 +1007,8 @@ class HomeOfficePlanner {
         this.currentUserUID = this.getUserUID(name);
         this.userRole = 'employee';
         
+        console.log('New employee registration successful:', name);
+        
         // Setup Firebase listeners for new user
         await this.setupDataListeners(this.currentUserUID);
         
@@ -924,6 +1016,7 @@ class HomeOfficePlanner {
     }
 
     showMainApplication() {
+        console.log('Showing main application...');
         const loginScreen = document.getElementById('loginScreen');
         const mainApp = document.getElementById('mainApp');
         const currentUserSpan = document.getElementById('currentUser');
@@ -956,9 +1049,12 @@ class HomeOfficePlanner {
 
         this.updateCurrentMonth();
         this.renderCalendar();
+        
+        console.log('Main application shown for user:', this.currentUser, 'role:', this.userRole);
     }
 
     logout() {
+        console.log('Logging out...');
         // Clean up Firebase listeners
         this.cleanupDataListeners();
         
@@ -1013,9 +1109,6 @@ class HomeOfficePlanner {
         this.updateDashboard(this.currentUser);
     }
 
-    // Continue with rest of the methods...
-    // (The remaining methods from the previous version remain the same)
-    
     showTeamOverview() {
         this.isTeamOverviewMode = true;
         const teamOverviewModal = document.getElementById('teamOverviewModal');
@@ -1157,9 +1250,6 @@ class HomeOfficePlanner {
         return calendarDiv;
     }
 
-    // Include all remaining methods from the original class...
-    // (Due to length constraints, continuing with key remaining methods)
-
     async changePassword() {
         const oldPasswordInput = document.getElementById('oldPassword');
         const newPasswordInput = document.getElementById('newPassword');
@@ -1224,7 +1314,6 @@ class HomeOfficePlanner {
         this.logout();
     }
 
-    // Additional utility methods
     selectEmployee(employeeName) {
         const selectedNameSpan = document.getElementById('selectedColleagueName');
         if (selectedNameSpan) selectedNameSpan.textContent = employeeName;
@@ -1855,5 +1944,7 @@ class HomeOfficePlanner {
 document.addEventListener('DOMContentLoaded', () => {
     console.log('DOM loaded, initializing Firebase-enabled planner...');
     window.planner = new HomeOfficePlanner();
-    window.planner.init();
+    window.planner.init().catch(error => {
+        console.error('Failed to initialize app:', error);
+    });
 });

@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HomeOffice-Planer DRV Saarland</title>
     <link rel="stylesheet" href="style.css">
-    <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#217A8D">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192x192.png">
-    <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512x512.png">
+    <meta name="apple-mobile-web-app-title" content="HomeOffice-Planer">
+    <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgdmlld0JveD0iMCAwIDE5MiAxOTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxOTIiIGhlaWdodD0iMTkyIiBmaWxsPSIjMjE3QThEIi8+Cjx0ZXh0IHg9Ijk2IiB5PSIxMDAiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSI0OCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkgwPC90ZXh0Pgo8L3N2Zz4K">
+    <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIkhvbWVPZmZpY2UtUGxhbmVyIERSViBTYWFybGFuZCIsCiAgInNob3J0X25hbWUiOiAiSG9tZU9mZmljZS1QbGFuZXIiLAogICJkZXNjcmlwdGlvbiI6ICJIb21lT2ZmaWNlLVBsYW5lciBmw7xyIERSViBTYWFybGFuZCIsCiAgInN0YXJ0X3VybCI6ICIuLyIsCiAgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIsCiAgImJhY2tncm91bmRfY29sb3IiOiAiI2ZjZmNmOSIsCiAgInRoZW1lX2NvbG9yIjogIiMyMTdBOEQiLAogICJpY29ucyI6IFsKICAgIHsKICAgICAgInNyYyI6ICJkYXRhOmltYWdlL3N2Zyt4bWw7YmFzZTY0LFBITjJaeUIzYVdSMGFEMGlNVGt5SWlCb1pXbG5hSFE5SWpFNU1pSWlkbWxsZDBKdmVEMGlNQ0F3SURFNU1pQXhPVElpSUdacGJHdzlJbTV2Ym1VaUlIaHRiRzV6UFNKb2RIUndPaTh2ZDNkM0xuY3pMbTl5Wnk4eU1EQXdMM04yWnlJK0NqeHlaV04wSUhkcFpIUm9QU0l4T1RJaUlHaGxhV2RvZEQwaU1Ua3lJaUJtYVd4c1BTSWpNakUzUVRoRUlpOCtDbkIwWlhoMElIZzlJamsySWlCNVBTSXhNREFpSUdadmJuUXRabUZ0YVd4NVBTSkJjbWxoYkNJaVptOXVkQzF6YVhwbFBTSTBPQ0lnWm1sc2JEMGlkMmhwZEdVaUlIUmxlSFF0WVc1amFHOXlQU0p0YVdSa2JHVWlQazR3UEM5MFpYaDBQZ29nSjNOMlp6NEsiLAogICAgICAic2l6ZXMiOiAiMTkyeDE5MiIsCiAgICAgICJ0eXBlIjogImltYWdlL3N2Zyt4bWwiCiAgICB9CiAgXQp9">
 </head>
 <body>
     <div class="container">
@@ -407,33 +407,70 @@
 
     <!-- Firebase SDK -->
     <script type="module">
-        // Firebase configuration - REPLACE WITH YOUR ACTUAL CONFIG
-        // import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-        // import { getDatabase } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+        // Firebase configuration - REAL CONFIG FROM USER
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getDatabase } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
         
-        // const firebaseConfig = {
-        //     apiKey: "YOUR_API_KEY_HERE",
-        //     authDomain: "YOUR_AUTH_DOMAIN_HERE",
-        //     databaseURL: "YOUR_DATABASE_URL_HERE",
-        //     projectId: "YOUR_PROJECT_ID_HERE",
-        //     storageBucket: "YOUR_STORAGE_BUCKET_HERE",
-        //     messagingSenderId: "YOUR_MESSAGING_SENDER_ID_HERE",
-        //     appId: "YOUR_APP_ID_HERE"
-        // };
+        const firebaseConfig = {
+            apiKey: "AIzaSyDdLYCXvtuXPUhehE-QfqaXWRfseGfwzf4",
+            authDomain: "homeoffice-planer-drv.firebaseapp.com",
+            databaseURL: "https://homeoffice-planer-drv-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "homeoffice-planer-drv",
+            storageBucket: "homeoffice-planer-drv.firebasestorage.app",
+            messagingSenderId: "669565818222",
+            appId: "1:669565818222:web:9eb342704c1a74c5eedd7f"
+        };
         
-        // window.firebaseApp = initializeApp(firebaseConfig);
-        // window.firebaseDB = getDatabase(window.firebaseApp);
-        
-        // For development - use mock Firebase
-        window.firebaseApp = { name: "mock" };
-        window.firebaseDB = { ref: () => ({}) };
+        try {
+            window.firebaseApp = initializeApp(firebaseConfig);
+            window.firebaseDB = getDatabase(window.firebaseApp);
+            console.log('Firebase initialized successfully');
+        } catch (error) {
+            console.error('Firebase initialization failed:', error);
+            // Fallback for development - use mock Firebase
+            window.firebaseApp = { name: "mock" };
+            window.firebaseDB = { ref: () => ({}) };
+        }
     </script>
     <script src="app.js"></script>
     <script>
-        // Service Worker registration
+        // PWA Service Worker registration
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./service-worker.js')
+                // Inline service worker for PWA functionality
+                const swCode = `
+                    const CACHE_NAME = 'homeoffice-planer-v1';
+                    const urlsToCache = [
+                        './',
+                        './index.html',
+                        './style.css',
+                        './app.js'
+                    ];
+
+                    self.addEventListener('install', (event) => {
+                        event.waitUntil(
+                            caches.open(CACHE_NAME)
+                                .then((cache) => cache.addAll(urlsToCache))
+                        );
+                    });
+
+                    self.addEventListener('fetch', (event) => {
+                        event.respondWith(
+                            caches.match(event.request)
+                                .then((response) => {
+                                    if (response) {
+                                        return response;
+                                    }
+                                    return fetch(event.request);
+                                })
+                        );
+                    });
+                `;
+                
+                const blob = new Blob([swCode], { type: 'application/javascript' });
+                const swUrl = URL.createObjectURL(blob);
+                
+                navigator.serviceWorker.register(swUrl)
                     .then((registration) => {
                         console.log('SW registered: ', registration);
                     })
@@ -442,6 +479,16 @@
                     });
             });
         }
+
+        // PWA install prompt
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            
+            // Show install button or notification
+            console.log('PWA installation available');
+        });
     </script>
 </body>
 </html>
