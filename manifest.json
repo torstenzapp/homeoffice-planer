@@ -1,12 +1,12 @@
 {
   "name": "HomeOffice-Planer DRV Saarland",
   "short_name": "HO-Planer",
-  "description": "Home-Office-Planung mit Live-Synchronisierung",
+  "description": "HomeOffice-Planung mit Live-Synchronisierung",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",
   "theme_color": "#217A8D",
-  "background_color": "#ffffff",
+  "background_color": "#F8F9FA",
   "scope": "/",
   "lang": "de",
   "icons": [

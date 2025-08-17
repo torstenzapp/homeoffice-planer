@@ -1,6 +1,4 @@
 // HomeOffice-Planer Service Worker
-// Cacht nur die Shell-Dateien, Firebase-Requests gehen immer ins Netz
-
 const CACHE_NAME = 'homeoffice-planer-v1';
 const urlsToCache = [
   '/',
@@ -62,7 +60,8 @@ self.addEventListener('fetch', event => {
   // Immer network first für Firebase Database calls
   if (url.hostname.includes('firebasedatabase.app') || 
       url.hostname.includes('googleapis.com') ||
-      url.hostname.includes('firebase.com')) {
+      url.hostname.includes('firebase.com') ||
+      url.hostname.includes('gstatic.com')) {
     event.respondWith(
       fetch(request).catch(() => {
         // Wenn Firebase offline ist, können wir keine Fallback-Daten liefern
@@ -104,7 +103,7 @@ self.addEventListener('fetch', event => {
       .catch(() => {
         // Wenn sowohl Cache als auch Netzwerk fehlschlagen
         if (request.destination === 'document') {
-          return caches.match('/');
+          return caches.match('/index.html');
         }
       })
   );
