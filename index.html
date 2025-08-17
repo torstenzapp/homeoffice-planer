@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HomeOffice-Planer DRV Saarland</title>
+    <link rel="stylesheet" href="style.css">
+    <meta name="theme-color" content="#217A8D">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="HomeOffice-Planer">
+    <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgdmlld0JveD0iMCAwIDE5MiAxOTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxOTIiIGhlaWdodD0iMTkyIiBmaWxsPSIjMjE3QThEIi8+Cjx0ZXh0IHg9Ijk2IiB5PSIxMDAiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSI0OCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkgwPC90ZXh0Pgo8L3N2Zz4K">
+    <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIkhvbWVPZmZpY2UtUGxhbmVyIERSViBTYWFybGFuZCIsCiAgInNob3J0X25hbWUiOiAiSG9tZU9mZmljZS1QbGFuZXIiLAogICJkZXNjcmlwdGlvbiI6ICJIb21lT2ZmaWNlLVBsYW5lciBmw7xyIERSViBTYWFybGFuZCIsCiAgInN0YXJ0X3VybCI6ICIuLyIsCiAgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIsCiAgImJhY2tncm91bmRfY29sb3IiOiAiI2ZjZmNmOSIsCiAgInRoZW1lX2NvbG9yIjogIiMyMTdBOEQiLAogICJpY29ucyI6IFsKICAgIHsKICAgICAgInNyYyI6ICJkYXRhOmltYWdlL3N2Zyt4bWw7YmFzZTY0LFBITjJaeUIzYVdSMGFEMGlNVGt5SWlCb1pXbG5hSFE5SWpFNU1pSWlkbWxsZDBKdmVEMGlNQ0F3SURFNU1pQXhPVElpSUdacGJHdzlJbTV2Ym1VaUlIaHRiRzV6UFNKb2RIUndPaTh2ZDNkM0xuY3pMbTl5Wnk4eU1EQXdMM04yWnlJK0NqeHlaV04wSUhkcFpIUm9QU0l4T1RJaUlHaGxhV2RvZEQwaU1Ua3lJaUJtYVd4c1BTSWpNakUzUVRoRUlpOCtDbkIwWlhoMElIZzlJamsySWlCNVBTSXhNREFpSUdadmJuUXRabUZ0YVd4NVBTSkJjbWxoYkNJaVptOXVkQzF6YVhwbFBTSTBPQ0lnWm1sc2JEMGlkMmhwZEdVaUlIUmxlSFF0WVc1amFHOXlQU0p0YVdSa2JHVWlQazR3UEM5MFpYaDBQZ29nSjNOMlp6NEsiLAogICAgICAic2l6ZXMiOiAiMTkyeDE5MiIsCiAgICAgICJ0eXBlIjogImltYWdlL3N2Zyt4bWwiCiAgICB9CiAgXQp9">
+</head>
+<body>
+    <div class="container">
+        <!-- Login Screen -->
+        <section class="login-screen" id="loginScreen">
+            <div class="card login-card">
+                <div class="card__body">
+                    <h1>HomeOffice-Planer DRV Saarland</h1>
+                    <div class="form-group">
+                        <label for="userType" class="form-label">Anmelden als</label>
+                        <select id="userType" class="form-control">
+                            <option value="">-- Auswählen --</option>
+                            <option value="employee">Kollege</option>
+                            <option value="teamleader">Teamleiter</option>
+                            <option value="newEmployee">Neuer Kollege</option>
+                        </select>
+                    </div>
+                    
+                    <div class="employee-login hidden" id="employeeLogin">
+                        <div class="form-group">
+                            <label for="employeeName" class="form-label">Name</label>
+                            <select id="employeeName" class="form-control">
+                                <option value="">-- Kollege auswählen --</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="employeePassword" class="form-label">Passwort</label>
+                            <input type="password" id="employeePassword" class="form-control" placeholder="Passwort eingeben">
+                        </div>
+                        <div class="login-actions">
+                            <button class="btn btn--primary" id="employeeLoginBtn">Anmelden</button>
+                        </div>
+                    </div>
+                    
+                    <div class="teamleader-login hidden" id="teamleaderLogin">
+                        <div class="form-group">
+                            <label for="teamleaderPassword" class="form-label">Teamleiter-Passwort</label>
+                            <input type="password" id="teamleaderPassword" class="form-control" placeholder="Teamleiter-Passwort eingeben">
+                        </div>
+                        <div class="login-actions">
+                            <button class="btn btn--primary" id="teamleaderLoginBtn">Anmelden</button>
+                        </div>
+                    </div>
+
+                    <div class="new-employee-login hidden" id="newEmployeeLogin">
+                        <div class="form-group">
+                            <label for="newEmployeeName" class="form-label">Name</label>
+                            <input type="text" id="newEmployeeName" class="form-control" placeholder="Ihren Namen eingeben">
+                        </div>
+                        <div class="form-group">
+                            <label for="newEmployeePassword" class="form-label">Passwort</label>
+                            <input type="password" id="newEmployeePassword" class="form-control" placeholder="Passwort eingeben">
+                        </div>
+                        <div class="form-group">
+                            <label for="newEmployeePasswordConfirm" class="form-label">Passwort bestätigen</label>
+                            <input type="password" id="newEmployeePasswordConfirm" class="form-control" placeholder="Passwort wiederholen">
+                        </div>
+                        <div class="login-actions">
+                            <button class="btn btn--primary" id="newEmployeeRegisterBtn">Registrieren</button>
+                        </div>
+                    </div>
+
+                    <div class="firebase-status" id="firebaseStatus">
+                        <small id="connectionStatus">Verbindung wird hergestellt...</small>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Main Application -->
+        <div class="main-app hidden" id="mainApp">
+            <!-- Header -->
+            <header class="header">
+                <div class="header__content">
+                    <h1>HomeOffice-Planer DRV Saarland</h1>
+                    <div class="header__nav">
+                        <div class="user-info" id="userInfo">
+                            <span id="currentUser"></span>
+                            <div class="security-notice hidden" id="securityNotice">
+                                Teamleiter-Modus: Alle Daten einsehbar
+                            </div>
+                            <small id="liveStatus" class="live-status">🔴 Offline</small>
+                        </div>
+                        <div class="nav-controls">
+                            <button class="btn btn--outline" id="prevMonth">‹</button>
+                            <span class="current-month" id="currentMonth"></span>
+                            <button class="btn btn--outline" id="nextMonth">›</button>
+                            <button class="btn btn--secondary" id="logoutBtn">Abmelden</button>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Teamleader Navigation -->
+            <nav class="teamleader-nav hidden" id="teamleaderNav">
+                <div class="nav-tabs">
+                    <button class="nav-tab active" data-tab="overview">Übersicht</button>
+                    <button class="nav-tab" data-tab="details">Detailansicht</button>
+                    <button class="nav-tab" data-tab="reports">Berichte</button>
+                </div>
+            </nav>
+
+            <!-- Employee View -->
+            <div class="employee-view" id="employeeView">
+                <!-- Dashboard -->
+                <section class="dashboard">
+                    <div class="card">
+                        <div class="card__body">
+                            <h3>Dashboard für <span id="selectedColleagueName"></span></h3>
+                            <div class="dashboard__controls">
+                                <div class="form-group">
+                                    <label for="homeofficeRule" class="form-label">HomeOffice-Regel</label>
+                                    <select id="homeofficeRule" class="form-control">
+                                        <option value="40">40% (Standard)</option>
+                                        <option value="60">60% (Erweitert)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="dashboard__actions">
+                                <button class="btn btn--secondary btn--sm" id="changePasswordBtn">Passwort ändern</button>
+                                <button class="btn btn--outline btn--sm" id="teamOverviewBtn">Team-Übersicht</button>
+                                <button class="btn btn--danger btn--sm" id="deleteAccountBtn">Konto löschen</button>
+                            </div>
+                            <div class="dashboard__stats">
+                                <div class="stat-card">
+                                    <h4>HomeOffice-Quote</h4>
+                                    <div class="progress-bar">
+                                        <div class="progress-fill" id="progressFill"></div>
+                                    </div>
+                                    <div class="stat-info">
+                                        <span id="homeofficePercent">0%</span>
+                                        <span class="stat-target" id="statTarget">Ziel: ≤ 40%</span>
+                                    </div>
+                                </div>
+                                <div class="stat-card">
+                                    <h4>Monat Übersicht</h4>
+                                    <div class="month-stats" id="monthStats">
+                                        <div>Arbeitstage: <span id="workDays">0</span></div>
+                                        <div>HomeOffice: <span id="homeOfficeDays">0</span></div>
+                                        <div>Büro: <span id="officeDays">0</span></div>
+                                        <div>Urlaub: <span id="vacationDays">0</span></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="warning-message" id="warningMessage" style="display: none;">
+                                <strong>⚠️ Warnung:</strong> <span id="warningText">Die HomeOffice-Regel wird überschritten!</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Teamleader View -->
+            <div class="teamleader-view hidden" id="teamleaderView">
+                <!-- Overview Tab -->
+                <div class="tab-content active" id="overviewTab">
+                    <div class="card">
+                        <div class="card__body">
+                            <div class="overview-header">
+                                <h3>Team-Übersicht</h3>
+                                <div class="teamleader-controls">
+                                    <div class="form-group">
+                                        <label for="teamleaderHomeofficeRule" class="form-label">HomeOffice-Regel</label>
+                                        <select id="teamleaderHomeofficeRule" class="form-control">
+                                            <option value="40">40% (Standard)</option>
+                                            <option value="60">60% (Erweitert)</option>
+                                        </select>
+                                    </div>
+                                    <button class="btn btn--outline btn--sm" id="teamleaderTeamOverviewBtn">Team-Übersicht</button>
+                                </div>
+                                <div class="filter-controls">
+                                    <select id="statusFilter" class="form-control">
+                                        <option value="all">Alle anzeigen</option>
+                                        <option value="violations">Nur Überschreitungen</option>
+                                        <option value="40">Nur 40% Quote</option>
+                                        <option value="60">Nur 60% Quote</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="team-overview-table" id="teamOverviewTable">
+                                <!-- Team overview will be rendered here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Details Tab -->
+                <div class="tab-content hidden" id="detailsTab">
+                    <div class="card">
+                        <div class="card__body">
+                            <h3>Detailansicht</h3>
+                            <div class="form-group">
+                                <label for="detailColleagueSelect" class="form-label">Kollege auswählen</label>
+                                <select id="detailColleagueSelect" class="form-control">
+                                    <option value="">-- Kollege auswählen --</option>
+                                </select>
+                            </div>
+                            <div id="colleagueDetail" class="colleague-detail hidden">
+                                <!-- Colleague detail will be rendered here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reports Tab -->
+                <div class="tab-content hidden" id="reportsTab">
+                    <div class="card">
+                        <div class="card__body">
+                            <h3>Berichte</h3>
+                            <div class="export-controls">
+                                <button class="btn btn--primary" id="exportReportBtn">Monatsbericht exportieren</button>
+                            </div>
+                            <div class="report-preview" id="reportPreview">
+                                <!-- Report preview will be rendered here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Team Overview Modal -->
+            <div class="team-overview-modal hidden" id="teamOverviewModal">
+                <div class="card">
+                    <div class="card__body">
+                        <div class="modal-header">
+                            <h3>Team-Übersicht - Alle Kalender</h3>
+                            <button class="btn btn--secondary btn--sm" id="backToDashboard">Zurück zu meiner Ansicht</button>
+                        </div>
+                        <div class="team-calendars" id="teamCalendars">
+                            <!-- Team calendars will be rendered here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Status Legende -->
+            <section class="legend">
+                <div class="card">
+                    <div class="card__body">
+                        <h4>Status Legende</h4>
+                        <div class="legend__items">
+                            <div class="legend__item">
+                                <span class="legend__color" style="background-color: #FF8C00;"></span>
+                                <span>🏠 Home-Office</span>
+                            </div>
+                            <div class="legend__item">
+                                <span class="legend__color" style="background-color: #4169E1;"></span>
+                                <span>🏢 Büro</span>
+                            </div>
+                            <div class="legend__item">
+                                <span class="legend__color" style="background-color: #32CD32;"></span>
+                                <span>🏖️ Urlaub</span>
+                            </div>
+                            <div class="legend__item">
+                                <span class="legend__color" style="background-color: #808080;"></span>
+                                <span>⏰ AZ</span>
+                            </div>
+                            <div class="legend__item">
+                                <span class="legend__color" style="background-color: #FF0000;"></span>
+                                <span>🎄 Feiertag</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Kalender -->
+            <section class="calendar-section">
+                <div class="card">
+                    <div class="card__body">
+                        <div class="calendar" id="calendar">
+                            <div class="calendar__grid">
+                                <div class="calendar__day-header">Mo</div>
+                                <div class="calendar__day-header">Di</div>
+                                <div class="calendar__day-header">Mi</div>
+                                <div class="calendar__day-header">Do</div>
+                                <div class="calendar__day-header">Fr</div>
+                                <div class="calendar__day-header">Sa</div>
+                                <div class="calendar__day-header">So</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>Design by Torsten Zapp 2025</p>
+        </footer>
+    </div>
+
+    <!-- Modal für Status Auswahl -->
+    <div class="modal hidden" id="statusModal">
+        <div class="modal__overlay"></div>
+        <div class="modal__content">
+            <h3>Status für <span id="statusModalDate"></span></h3>
+            <div class="status-options">
+                <button class="status-btn" data-status="homeoffice">
+                    <span class="status-symbol">🏠</span>
+                    <span>Home-Office</span>
+                </button>
+                <button class="status-btn" data-status="buero">
+                    <span class="status-symbol">🏢</span>
+                    <span>Büro</span>
+                </button>
+                <button class="status-btn" data-status="urlaub">
+                    <span class="status-symbol">🏖️</span>
+                    <span>Urlaub</span>
+                </button>
+                <button class="status-btn" data-status="az">
+                    <span class="status-symbol">⏰</span>
+                    <span>AZ</span>
+                </button>
+                <button class="status-btn" data-status="clear">
+                    <span class="status-symbol">❌</span>
+                    <span>Löschen</span>
+                </button>
+            </div>
+            <div class="modal__actions">
+                <button class="btn btn--secondary" id="cancelStatusChange">Abbrechen</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal für Passwort ändern -->
+    <div class="modal hidden" id="changePasswordModal">
+        <div class="modal__overlay"></div>
+        <div class="modal__content">
+            <h3>Passwort ändern</h3>
+            <div class="form-group">
+                <label for="oldPassword" class="form-label">Altes Passwort</label>
+                <input type="password" id="oldPassword" class="form-control" placeholder="Altes Passwort eingeben">
+            </div>
+            <div class="form-group">
+                <label for="newPassword" class="form-label">Neues Passwort</label>
+                <input type="password" id="newPassword" class="form-control" placeholder="Neues Passwort eingeben">
+            </div>
+            <div class="form-group">
+                <label for="confirmNewPassword" class="form-label">Neues Passwort bestätigen</label>
+                <input type="password" id="confirmNewPassword" class="form-control" placeholder="Neues Passwort wiederholen">
+            </div>
+            <div class="modal__actions">
+                <button class="btn btn--secondary" id="cancelPasswordChange">Abbrechen</button>
+                <button class="btn btn--primary" id="confirmPasswordChange">Passwort ändern</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal für Konto löschen -->
+    <div class="modal hidden" id="deleteAccountModal">
+        <div class="modal__overlay"></div>
+        <div class="modal__content">
+            <h3>⚠️ Konto löschen</h3>
+            <p class="warning-text">
+                <strong>Achtung:</strong> Diese Aktion kann nicht rückgängig gemacht werden!
+            </p>
+            <p>Möchten Sie Ihr Konto wirklich löschen? Alle Ihre Planungsdaten werden unwiderruflich gelöscht.</p>
+            <div class="modal__actions">
+                <button class="btn btn--secondary" id="cancelDeleteAccount">Abbrechen</button>
+                <button class="btn btn--danger" id="confirmDeleteAccount">Konto löschen</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal für Teamleiter Passwort zurücksetzen -->
+    <div class="modal hidden" id="resetPasswordModal">
+        <div class="modal__overlay"></div>
+        <div class="modal__content">
+            <h3>Passwort zurücksetzen für <span id="resetPasswordColleague"></span></h3>
+            <p>Das Passwort wird auf das Standard-Passwort "NeuesPasswort123" zurückgesetzt.</p>
+            <div class="modal__actions">
+                <button class="btn btn--secondary" id="cancelResetPassword">Abbrechen</button>
+                <button class="btn btn--warning" id="confirmResetPassword">Passwort zurücksetzen</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal für Kollegen löschen (Teamleiter) -->
+    <div class="modal hidden" id="deleteColleagueModal">
+        <div class="modal__overlay"></div>
+        <div class="modal__content">
+            <h3>⚠️ Kollegen löschen</h3>
+            <p class="warning-text">
+                <strong>Achtung:</strong> Diese Aktion kann nicht rückgängig gemacht werden!
+            </p>
+            <p>Möchten Sie den Kollegen <strong id="deleteColleagueName"></strong> wirklich löschen? Alle Planungsdaten werden unwiderruflich gelöscht.</p>
+            <div class="modal__actions">
+                <button class="btn btn--secondary" id="cancelDeleteColleague">Abbrechen</button>
+                <button class="btn btn--danger" id="confirmDeleteColleague">Kollegen löschen</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        // Firebase configuration - REAL CONFIG FROM USER
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getDatabase } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+        
+        const firebaseConfig = {
+            apiKey: "AIzaSyDdLYCXvtuXPUhehE-QfqaXWRfseGfwzf4",
+            authDomain: "homeoffice-planer-drv.firebaseapp.com",
+            databaseURL: "https://homeoffice-planer-drv-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "homeoffice-planer-drv",
+            storageBucket: "homeoffice-planer-drv.firebasestorage.app",
+            messagingSenderId: "669565818222",
+            appId: "1:669565818222:web:9eb342704c1a74c5eedd7f"
+        };
+        
+        try {
+            window.firebaseApp = initializeApp(firebaseConfig);
+            window.firebaseDB = getDatabase(window.firebaseApp);
+            console.log('Firebase initialized successfully');
+        } catch (error) {
+            console.error('Firebase initialization failed:', error);
+            // Fallback for development - use mock Firebase
+            window.firebaseApp = { name: "mock" };
+            window.firebaseDB = { ref: () => ({}) };
+        }
+    </script>
+    <script src="app.js"></script>
+    <script>
+        // PWA Service Worker registration
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                // Inline service worker for PWA functionality
+                const swCode = `
+                    const CACHE_NAME = 'homeoffice-planer-v1';
+                    const urlsToCache = [
+                        './',
+                        './index.html',
+                        './style.css',
+                        './app.js'
+                    ];
+
+                    self.addEventListener('install', (event) => {
+                        event.waitUntil(
+                            caches.open(CACHE_NAME)
+                                .then((cache) => cache.addAll(urlsToCache))
+                        );
+                    });
+
+                    self.addEventListener('fetch', (event) => {
+                        event.respondWith(
+                            caches.match(event.request)
+                                .then((response) => {
+                                    if (response) {
+                                        return response;
+                                    }
+                                    return fetch(event.request);
+                                })
+                        );
+                    });
+                `;
+                
+                const blob = new Blob([swCode], { type: 'application/javascript' });
+                const swUrl = URL.createObjectURL(blob);
+                
+                navigator.serviceWorker.register(swUrl)
+                    .then((registration) => {
+                        console.log('SW registered: ', registration);
+                    })
+                    .catch((registrationError) => {
+                        console.log('SW registration failed: ', registrationError);
+                    });
+            });
+        }
+
+        // PWA install prompt
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            
+            // Show install button or notification
+            console.log('PWA installation available');
+        });
+    </script>
+</body>
+</html>
