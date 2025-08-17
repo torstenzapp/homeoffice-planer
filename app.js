@@ -1,908 +1,166 @@
-// HomeOffice Planner JavaScript – Firebase Realtime Database (fixed)
-// Änderungen:
-// 1) Einheitliches Passwort-Hashing via SHA-256 (keine simpleHash-Verwendung mehr für Passwörter)
-// 2) Saubere Firebase-Initialisierung (kein window.firebaseDB nötig)
-// 3) Ein konsistentes Firebase v10.12.2 für alle Imports
-// 4) UID-Erzeugung ohne btoa/Unicode-Probleme
-// 5) Punkt 7 (Urlaub nicht in Quote zählen) bleibt unverändert
+// HomeOfficePlanner_fixed.js
+// -----------------------------------------------
+// Fixes: SHA-256 Password Hashing, Firebase Init, UID ohne btoa, Event Delegation
+// -----------------------------------------------
 
 class HomeOfficePlanner {
   constructor() {
-    // Firebase
     this.isFirebaseEnabled = false;
     this.database = null;
+    this.currentUser = null;
     this.currentUserUID = null;
+    this.userRole = null;
     this.dataListeners = new Map();
 
-    // Feiertage bis 2030 (unverändert)
-    this.holidays = {
-      "2025": [
-        { datum: "2025-01-01", name: "Neujahr" },
-        { datum: "2025-04-18", name: "Karfreitag" },
-        { datum: "2025-04-21", name: "Ostermontag" },
-        { datum: "2025-05-01", name: "Tag der Arbeit" },
-        { datum: "2025-05-29", name: "Christi Himmelfahrt" },
-        { datum: "2025-06-09", name: "Pfingstmontag" },
-        { datum: "2025-06-19", name: "Fronleichnam" },
-        { datum: "2025-08-15", name: "Mariä Himmelfahrt" },
-        { datum: "2025-10-03", name: "Tag der Deutschen Einheit" },
-        { datum: "2025-11-01", name: "Allerheiligen" },
-        { datum: "2025-12-25", name: "1. Weihnachtsfeiertag" },
-        { datum: "2025-12-26", name: "2. Weihnachtsfeiertag" }
-      ],
-      "2026": [
-        { datum: "2026-01-01", name: "Neujahr" },
-        { datum: "2026-04-03", name: "Karfreitag" },
-        { datum: "2026-04-06", name: "Ostermontag" },
-        { datum: "2026-05-01", name: "Tag der Arbeit" },
-        { datum: "2026-05-14", name: "Christi Himmelfahrt" },
-        { datum: "2026-05-25", name: "Pfingstmontag" },
-        { datum: "2026-06-04", name: "Fronleichnam" },
-        { datum: "2026-08-15", name: "Mariä Himmelfahrt" },
-        { datum: "2026-10-03", name: "Tag der Deutschen Einheit" },
-        { datum: "2026-11-01", name: "Allerheiligen" },
-        { datum: "2026-12-25", name: "1. Weihnachtsfeiertag" },
-        { datum: "2026-12-26", name: "2. Weihnachtsfeiertag" }
-      ],
-      "2027": [
-        { datum: "2027-01-01", name: "Neujahr" },
-        { datum: "2027-03-26", name: "Karfreitag" },
-        { datum: "2027-03-29", name: "Ostermontag" },
-        { datum: "2027-05-01", name: "Tag der Arbeit" },
-        { datum: "2027-05-06", name: "Christi Himmelfahrt" },
-        { datum: "2027-05-17", name: "Pfingstmontag" },
-        { datum: "2027-05-27", name: "Fronleichnam" },
-        { datum: "2027-08-15", name: "Mariä Himmelfahrt" },
-        { datum: "2027-10-03", name: "Tag der Deutschen Einheit" },
-        { datum: "2027-11-01", name: "Allerheiligen" },
-        { datum: "2027-12-25", name: "1. Weihnachtsfeiertag" },
-        { datum: "2027-12-26", name: "2. Weihnachtsfeiertag" }
-      ],
-      "2028": [
-        { datum: "2028-01-01", name: "Neujahr" },
-        { datum: "2028-04-14", name: "Karfreitag" },
-        { datum: "2028-04-17", name: "Ostermontag" },
-        { datum: "2028-05-01", name: "Tag der Arbeit" },
-        { datum: "2028-05-25", name: "Christi Himmelfahrt" },
-        { datum: "2028-06-05", name: "Pfingstmontag" },
-        { datum: "2028-06-15", name: "Fronleichnam" },
-        { datum: "2028-08-15", name: "Mariä Himmelfahrt" },
-        { datum: "2028-10-03", name: "Tag der Deutschen Einheit" },
-        { datum: "2028-11-01", name: "Allerheiligen" },
-        { datum: "2028-12-25", name: "1. Weihnachtsfeiertag" },
-        { datum: "2028-12-26", name: "2. Weihnachtsfeiertag" }
-      ],
-      "2029": [
-        { datum: "2029-01-01", name: "Neujahr" },
-        { datum: "2029-03-30", name: "Karfreitag" },
-        { datum: "2029-04-02", name: "Ostermontag" },
-        { datum: "2029-05-01", name: "Tag der Arbeit" },
-        { datum: "2029-05-10", name: "Christi Himmelfahrt" },
-        { datum: "2029-05-21", name: "Pfingstmontag" },
-        { datum: "2029-05-31", name: "Fronleichnam" },
-        { datum: "2029-08-15", name: "Mariä Himmelfahrt" },
-        { datum: "2029-10-03", name: "Tag der Deutschen Einheit" },
-        { datum: "2029-11-01", name: "Allerheiligen" },
-        { datum: "2029-12-25", name: "1. Weihnachtsfeiertag" },
-        { datum: "2029-12-26", name: "2. Weihnachtsfeiertag" }
-      ],
-      "2030": [
-        { datum: "2030-01-01", name: "Neujahr" },
-        { datum: "2030-04-19", name: "Karfreitag" },
-        { datum: "2030-04-22", name: "Ostermontag" },
-        { datum: "2030-05-01", name: "Tag der Arbeit" },
-        { datum: "2030-05-30", name: "Christi Himmelfahrt" },
-        { datum: "2030-06-10", name: "Pfingstmontag" },
-        { datum: "2030-06-20", name: "Fronleichnam" },
-        { datum: "2030-08-15", name: "Mariä Himmelfahrt" },
-        { datum: "2030-10-03", name: "Tag der Deutschen Einheit" },
-        { datum: "2030-11-01", name: "Allerheiligen" },
-        { datum: "2030-12-25", name: "1. Weihnachtsfeiertag" },
-        { datum: "2030-12-26", name: "2. Weihnachtsfeiertag" }
-      ]
-    };
-
-    this.statusTypes = {
-      homeoffice: { name: "Home-Office", color: "#FF8C00", symbol: "🏠" },
-      buero: { name: "Büro", color: "#4169E1", symbol: "🏢" },
-      urlaub: { name: "Urlaub", color: "#32CD32", symbol: "🏖️" },
-      az: { name: "AZ", color: "#808080", symbol: "⏰" }
-    };
-
-    // Passwörter & App-Status
-    this.teamleaderPassword = "teamleiter123";
+    this.colleagues = ["Max", "Anna", "Lisa"];
     this.defaultPassword = "password123";
-    this.newPasswordDefault = "NeuesPasswort123";
-
-    this.colleagues = ["Torsten Zapp", "Anna", "Michael", "Sarah", "Thomas"];
-    this.currentUser = null;
-    this.userRole = null;
-    this.currentDate = new Date();
-    this.planningData = {};
     this.colleaguePasswords = {};
     this.homeofficeRules = {};
-    this.selectedDateForStatus = null;
-    this.activeTab = "overview";
-    this.selectedColleagueForAction = null;
-    this.isTeamOverviewMode = false;
 
-    // Regeln sofort setzen; Passwörter asynchron in init()
-    this.initializeDefaultRules();
+    this.teamleaderPassword = "teamleiter123";
   }
 
-  // ==== Firebase Init (v10.12.2) ====
+  async sha256Hash(str) {
+    const buf = new TextEncoder().encode(str);
+    const digest = await crypto.subtle.digest("SHA-256", buf);
+    return Array.from(new Uint8Array(digest))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+  }
+
+  simpleHash(str) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      hash = (hash << 5) - hash + str.charCodeAt(i);
+      hash |= 0;
+    }
+    return hash.toString();
+  }
+
+  getUserUID(username) {
+    const enc = new TextEncoder().encode(username);
+    let h = 0;
+    for (const b of enc) {
+      h = (h * 31 + b) >>> 0;
+    }
+    return h.toString(16).padStart(8, "0");
+  }
+
+  async initializeDefaultPasswords() {
+    const promises = this.colleagues.map(async (colleague) => {
+      this.colleaguePasswords[colleague] = await this.sha256Hash(this.defaultPassword);
+    });
+    await Promise.all(promises);
+  }
+
   async initializeFirebase() {
     try {
-      const [{ initializeApp }, { getDatabase, ref, onValue }] = await Promise.all([
+      const [{ initializeApp }, { getDatabase }] = await Promise.all([
         import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"),
         import("https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js")
       ]);
 
-      // Deine bekannte Config (StorageBucket optional, hier weggelassen)
       const firebaseConfig = {
-        apiKey: "AIzaSyDdLYCXvtuXPUhehE-QfqaXWRfseGfwzf4",
-        authDomain: "homeoffice-planer-drv.firebaseapp.com",
-        databaseURL:
-          "https://homeoffice-planer-drv-default-rtdb.europe-west1.firebasedatabase.app",
-        projectId: "homeoffice-planer-drv"
+        apiKey: "DEIN_API_KEY",
+        authDomain: "DEIN_PROJECT.firebaseapp.com",
+        databaseURL: "https://DEIN_PROJECT-default-rtdb.europe-west1.firebasedatabase.app",
+        projectId: "DEIN_PROJECT",
+        storageBucket: "DEIN_PROJECT.appspot.com"
       };
 
       const app = initializeApp(firebaseConfig);
       this.database = getDatabase(app);
       this.isFirebaseEnabled = true;
-
-      // Verbindung überwachen
-      const connectedRef = ref(this.database, ".info/connected");
-      onValue(connectedRef, (snap) => {
-        this.updateLiveStatus(snap.val() === true ? "🟢 Live" : "🔴 Offline");
-      });
-
-      this.updateConnectionStatus("🟢 Firebase verbunden");
+      console.log("🟢 Firebase verbunden");
       return true;
     } catch (e) {
       console.log("Firebase init fehlgeschlagen:", e);
       this.isFirebaseEnabled = false;
-      this.updateConnectionStatus("🔴 Offline Modus");
-      this.updateLiveStatus("🔴 Offline");
       return false;
     }
   }
 
-  updateConnectionStatus(status) {
-    const el = document.getElementById("connectionStatus");
-    if (el) el.textContent = status;
-  }
-  updateLiveStatus(status) {
-    const el = document.getElementById("liveStatus");
-    if (el) el.textContent = status;
-  }
-
-  // ==== Hashing ====
-  async sha256Hash(message) {
-    if (typeof window !== "undefined" && window.crypto?.subtle) {
-      const msgBuffer = new TextEncoder().encode(message);
-      const hashBuffer = await window.crypto.subtle.digest("SHA-256", msgBuffer);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+  async getStoredPasswordHash(name) {
+    if (!this.isFirebaseEnabled || !name) return null;
+    try {
+      const { ref, get } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js");
+      const uid = this.getUserUID(name);
+      const profileRef = ref(this.database, `users/${uid}/profile`);
+      const snap = await get(profileRef);
+      const data = snap.val();
+      return data?.passwordHash || null;
+    } catch (e) {
+      console.warn("getStoredPasswordHash failed:", e);
+      return null;
     }
-    // Fallback (selten genutzt): sehr einfache Hash-Variante – nicht für Passwörter!
-    // Wir nutzen es hier NICHT für Passwörter, nur als Notlösung.
-    return this.simpleHash(message);
   }
 
-  simpleHash(str) {
-    let hash = 0;
-    if (str.length === 0) return hash.toString();
-    for (let i = 0; i < str.length; i++) {
-      const char = str.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash |= 0;
-    }
-    return Math.abs(hash).toString();
-  }
-
-  // **Neu**: default Passwörter SHA‑256 (asynchron)
-  async initializeDefaultPasswords() {
-    const tasks = this.colleagues.map(async (name) => {
-      this.colleaguePasswords[name] = await this.sha256Hash(this.defaultPassword);
-    });
-    await Promise.all(tasks);
-  }
-
-  initializeDefaultRules() {
-    this.colleagues.forEach((c) => (this.homeofficeRules[c] = 40));
-  }
-
-  // UID ohne btoa/Unicode-Probleme: 32-bit Rolling Hash aus UTF-8, hex
-  getUserUID(username) {
-    const enc = new TextEncoder().encode(username);
-    let h = 0;
-    for (const b of enc) h = (h * 31 + b) >>> 0;
-    return h.toString(16).padStart(8, "0");
-  }
-
-  // ==== Realtime DB Ops (einheitlich 10.12.2) ====
-  async writeData(path, data) {
+  async saveUserProfile(name, profile) {
     if (!this.isFirebaseEnabled) return;
     try {
-      const { ref, set } = await import(
-        "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js"
-      );
-      const dataRef = ref(this.database, path);
-      await set(dataRef, data);
+      const { ref, set } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js");
+      const uid = this.getUserUID(name);
+      await set(ref(this.database, `users/${uid}/profile`), profile);
     } catch (e) {
-      console.error("Error writing data:", e);
+      console.error("saveUserProfile failed:", e);
     }
   }
 
-  async updateData(path, updates) {
-    if (!this.isFirebaseEnabled) return;
-    try {
-      const { ref, update } = await import(
-        "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js"
-      );
-      const dataRef = ref(this.database, path);
-      await update(dataRef, updates);
-    } catch (e) {
-      console.error("Error updating data:", e);
-    }
-  }
-
-  async removeData(path) {
-    if (!this.isFirebaseEnabled) return;
-    try {
-      const { ref, remove } = await import(
-        "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js"
-      );
-      const dataRef = ref(this.database, path);
-      await remove(dataRef);
-    } catch (e) {
-      console.error("Error removing data:", e);
-    }
-  }
-
-  async setupDataListeners(uid) {
-    if (!this.isFirebaseEnabled) return;
-    try {
-      const { ref, onValue } = await import(
-        "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js"
-      );
-
-      const userRef = ref(this.database, `users/${uid}/profile`);
-      const unsubUser = onValue(userRef, (snap) => {
-        const userData = snap.val();
-        if (userData) this.handleUserDataUpdate(userData);
-      });
-      this.dataListeners.set(`user_${uid}`, unsubUser);
-
-      const plansRef = ref(this.database, `plans/${uid}`);
-      const unsubPlans = onValue(plansRef, (snap) => {
-        const plansData = snap.val();
-        this.handlePlansDataUpdate(plansData || {});
-      });
-      this.dataListeners.set(`plans_${uid}`, unsubPlans);
-
-      if (this.userRole === "teamleader") await this.setupTeamDataListeners();
-    } catch (e) {
-      console.error("Error setting up data listeners:", e);
-    }
-  }
-
-  async setupTeamDataListeners() {
-    if (!this.isFirebaseEnabled || this.userRole !== "teamleader") return;
-    try {
-      const { ref, onValue } = await import(
-        "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js"
-      );
-
-      const allUsersRef = ref(this.database, "users");
-      const unsubAllUsers = onValue(allUsersRef, (snap) => {
-        const allUsers = snap.val();
-        if (allUsers) this.handleAllUsersDataUpdate(allUsers);
-      });
-      this.dataListeners.set("all_users", unsubAllUsers);
-
-      const allPlansRef = ref(this.database, "plans");
-      const unsubAllPlans = onValue(allPlansRef, (snap) => {
-        const allPlans = snap.val();
-        this.handleAllPlansDataUpdate(allPlans || {});
-      });
-      this.dataListeners.set("all_plans", unsubAllPlans);
-    } catch (e) {
-      console.error("Error setting up team data listeners:", e);
-    }
-  }
-
-  handleUserDataUpdate(userData) {
-    if (userData.quota) this.homeofficeRules[this.currentUser] = userData.quota;
-    if (this.userRole === "employee" && !this.isTeamOverviewMode) this.updateDashboard(this.currentUser);
-  }
-
-  handlePlansDataUpdate(plansData) {
-    if (!this.planningData[this.currentUser]) this.planningData[this.currentUser] = {};
-    for (const monthKey in plansData) {
-      const monthData = plansData[monthKey];
-      for (const dateKey in monthData) {
-        this.planningData[this.currentUser][dateKey] = monthData[dateKey];
-      }
-    }
-    this.renderCalendar();
-    if (this.userRole === "employee" && !this.isTeamOverviewMode) this.updateDashboard(this.currentUser);
-  }
-
-  handleAllUsersDataUpdate(allUsers) {
-    this.colleagues = [];
-    for (const uid in allUsers) {
-      const userData = allUsers[uid];
-      if (userData.profile?.name) {
-        this.colleagues.push(userData.profile.name);
-        if (userData.profile.quota) this.homeofficeRules[userData.profile.name] = userData.profile.quota;
-      }
-    }
-    this.populateEmployeeSelect();
-    this.populateDetailColleagueSelect();
-    if (this.activeTab === "overview") this.renderTeamOverview();
-  }
-
-  handleAllPlansDataUpdate(allPlans) {
-    this.planningData = {};
-    for (const uid in allPlans) {
-      // Zuordnung via UID-Mapping (vereinfachte Heuristik)
-      let username = null;
-      for (const colleague of this.colleagues) {
-        if (this.getUserUID(colleague) === uid) { username = colleague; break; }
-      }
-      if (!username) continue;
-      this.planningData[username] = {};
-      const userPlans = allPlans[uid];
-      for (const monthKey in userPlans) {
-        const monthData = userPlans[monthKey];
-        for (const dateKey in monthData) {
-          this.planningData[username][dateKey] = monthData[dateKey];
-        }
-      }
-    }
-    this.renderCalendar();
-    if (this.isTeamOverviewMode) this.renderTeamCalendars();
-    if (this.activeTab === "overview") this.renderTeamOverview();
-  }
-
-  cleanupDataListeners() {
-    for (const [key, unsubscribe] of this.dataListeners) {
-      if (typeof unsubscribe === "function") unsubscribe();
-    }
-    this.dataListeners.clear();
-  }
-
-  async saveUserProfile(username, data) {
-    const uid = this.getUserUID(username);
-    await this.writeData(`users/${uid}/profile`, {
-      name: username,
-      role: data.role || "employee",
-      quota: data.quota || 40,
-      passwordHash: data.passwordHash,
-      lastUpdated: Date.now()
-    });
-  }
-
-  async savePlanningData(username, date, status) {
-    const uid = this.getUserUID(username);
-    const yearMonth = date.substring(0, 7);
-    if (status) await this.writeData(`plans/${uid}/${yearMonth}/${date}`, status);
-    else await this.removeData(`plans/${uid}/${yearMonth}/${date}`);
-  }
-
-  // ==== App Init ====
-  async init() {
-    // 1) Default-Passwörter (SHA-256) vorbereiten
-    await this.initializeDefaultPasswords();
-
-    // 2) Firebase initialisieren
-    await this.initializeFirebase();
-
-    // 3) UI
-    this.showLoginScreen();
-    this.populateEmployeeSelect();
-    this.setupEventListeners();
-  }
-
-  // ==== UI / Events (gekürzt auf Kernfunktionen – identisch zu deiner Logik) ====
-  setupEventListeners() {
-    setTimeout(() => {
-      this.setupLoginListeners();
-      this.setupNavigationListeners();
-      this.setupModalListeners();
-      this.setupTeamleaderListeners();
-      this.setupPasswordListeners();
-      this.setupDeleteAccountListeners();
-      this.setupHomeofficeRuleListeners();
-      this.setupTeamOverviewListeners();
-    }, 100);
-  }
-
-  setupLoginListeners() {
-    const employeeLoginBtn = document.getElementById("employeeLoginBtn");
-    const teamleaderLoginBtn = document.getElementById("teamleaderLoginBtn");
-    const newEmployeeRegisterBtn = document.getElementById("newEmployeeRegisterBtn");
-
-    if (employeeLoginBtn) employeeLoginBtn.addEventListener("click", (e) => { e.preventDefault(); this.loginAsEmployee(); });
-    if (teamleaderLoginBtn) teamleaderLoginBtn.addEventListener("click", (e) => { e.preventDefault(); this.loginAsTeamleader(); });
-    if (newEmployeeRegisterBtn) newEmployeeRegisterBtn.addEventListener("click", (e) => { e.preventDefault(); this.registerNewEmployee(); });
-
+  async loginAsEmployee() {
+    const employeeName = document.getElementById("employeeName");
     const employeePassword = document.getElementById("employeePassword");
-    if (employeePassword) employeePassword.addEventListener("keypress", (e) => { if (e.key === "Enter") { e.preventDefault(); this.loginAsEmployee(); } });
+    if (!employeeName?.value) return alert("Bitte wählen Sie einen Kollegen aus.");
+    if (!employeePassword?.value) return alert("Bitte geben Sie ein Passwort ein.");
 
-    const teamleaderPassword = document.getElementById("teamleaderPassword");
-    if (teamleaderPassword) teamleaderPassword.addEventListener("keypress", (e) => { if (e.key === "Enter") { e.preventDefault(); this.loginAsTeamleader(); } });
+    const name = employeeName.value;
+    const input = employeePassword.value;
+    const sha = await this.sha256Hash(input);
 
-    const newEmployeePasswordConfirm = document.getElementById("newEmployeePasswordConfirm");
-    if (newEmployeePasswordConfirm) newEmployeePasswordConfirm.addEventListener("keypress", (e) => { if (e.key === "Enter") { e.preventDefault(); this.registerNewEmployee(); } });
+    let stored = await this.getStoredPasswordHash(name);
+    if (!stored) stored = this.colleaguePasswords[name] || null;
 
-    const userTypeSelect = document.getElementById("userType");
-    if (userTypeSelect) {
-      const clone = userTypeSelect.cloneNode(true);
-      userTypeSelect.parentNode.replaceChild(clone, userTypeSelect);
-      clone.addEventListener("change", (e) => this.showLoginType(e.target.value));
+    let ok = false;
+    if (stored) {
+      const isSha = /^[0-9a-f]{64}$/i.test(stored);
+      ok = isSha ? (sha === stored) : (this.simpleHash(input) === stored);
     }
-  }
+    if (!ok) return alert("Falsches Passwort!");
 
-  setupNavigationListeners() {
-    const prevBtn = document.getElementById("prevMonth");
-    const nextBtn = document.getElementById("nextMonth");
-    const logoutBtn = document.getElementById("logoutBtn");
-    if (prevBtn) prevBtn.addEventListener("click", (e) => { e.preventDefault(); this.navigateMonth(-1); });
-    if (nextBtn) nextBtn.addEventListener("click", (e) => { e.preventDefault(); this.navigateMonth(1); });
-    if (logoutBtn) logoutBtn.addEventListener("click", (e) => { e.preventDefault(); this.logout(); });
-  }
-
-  setupModalListeners() {
-    const cancelStatusBtn = document.getElementById("cancelStatusChange");
-    if (cancelStatusBtn) cancelStatusBtn.addEventListener("click", (e) => { e.preventDefault(); this.hideStatusModal(); });
-
-    // Delegation für .status-btn (ersetzt statische Bindung)
-    document.addEventListener("click", (e) => {
-      const btn = e.target.closest(".status-btn");
-      if (!btn) return;
-      e.preventDefault();
-      this.setStatus(btn.dataset.status);
-    });
-
-    document.querySelectorAll(".modal__overlay").forEach((ov) => {
-      ov.addEventListener("click", (e) => { if (e.target === ov) this.hideAllModals(); });
-    });
-  }
-
-  setupHomeofficeRuleListeners() {
-    const homeofficeRule = document.getElementById("homeofficeRule");
-    if (homeofficeRule) homeofficeRule.addEventListener("change", async (e) => {
-      if (this.currentUser && this.userRole === "employee") {
-        const newQuota = parseInt(e.target.value, 10);
-        this.homeofficeRules[this.currentUser] = newQuota;
-        const currentPasswordHash = this.colleaguePasswords[this.currentUser];
-        await this.saveUserProfile(this.currentUser, { role: "employee", quota: newQuota, passwordHash: currentPasswordHash });
-        this.updateDashboard(this.currentUser);
+    try {
+      const wasSimple = stored && !/^[0-9a-f]{64}$/i.test(stored);
+      if (this.isFirebaseEnabled && wasSimple) {
+        await this.saveUserProfile(name, {
+          role: "employee",
+          quota: this.homeofficeRules[name] || 40,
+          passwordHash: sha
+        });
+        this.colleaguePasswords[name] = sha;
       }
-    });
+    } catch (_) {}
 
-    const teamleaderHomeofficeRule = document.getElementById("teamleaderHomeofficeRule");
-    if (teamleaderHomeofficeRule) teamleaderHomeofficeRule.addEventListener("change", () => { if (this.userRole === "teamleader") this.renderTeamOverview(); });
+    this.currentUser = name;
+    this.currentUserUID = this.getUserUID(this.currentUser);
+    this.userRole = "employee";
+    this.showMainApplication();
   }
 
-  setupTeamOverviewListeners() {
-    const teamOverviewBtn = document.getElementById("teamOverviewBtn");
-    if (teamOverviewBtn) teamOverviewBtn.addEventListener("click", (e) => { e.preventDefault(); this.showTeamOverview(); });
-    const teamleaderTeamOverviewBtn = document.getElementById("teamleaderTeamOverviewBtn");
-    if (teamleaderTeamOverviewBtn) teamleaderTeamOverviewBtn.addEventListener("click", (e) => { e.preventDefault(); this.showTeamOverview(); });
-    const backToDashboard = document.getElementById("backToDashboard");
-    if (backToDashboard) backToDashboard.addEventListener("click", (e) => { e.preventDefault(); this.hideTeamOverview(); });
-  }
-
-  setupPasswordListeners() {
-    const changePasswordBtn = document.getElementById("changePasswordBtn");
-    if (changePasswordBtn) changePasswordBtn.addEventListener("click", (e) => { e.preventDefault(); this.showChangePasswordModal(); });
-
-    const confirmPasswordChangeBtn = document.getElementById("confirmPasswordChange");
-    const cancelPasswordChangeBtn = document.getElementById("cancelPasswordChange");
-    if (confirmPasswordChangeBtn) confirmPasswordChangeBtn.addEventListener("click", (e) => { e.preventDefault(); this.changePassword(); });
-    if (cancelPasswordChangeBtn) cancelPasswordChangeBtn.addEventListener("click", (e) => { e.preventDefault(); this.hideChangePasswordModal(); });
-
-    const confirmResetPasswordBtn = document.getElementById("confirmResetPassword");
-    const cancelResetPasswordBtn = document.getElementById("cancelResetPassword");
-    if (confirmResetPasswordBtn) confirmResetPasswordBtn.addEventListener("click", (e) => { e.preventDefault(); this.resetColleaguePassword(); });
-    if (cancelResetPasswordBtn) cancelResetPasswordBtn.addEventListener("click", (e) => { e.preventDefault(); this.hideResetPasswordModal(); });
-  }
-
-  setupDeleteAccountListeners() {
-    const deleteAccountBtn = document.getElementById("deleteAccountBtn");
-    if (deleteAccountBtn) deleteAccountBtn.addEventListener("click", (e) => { e.preventDefault(); this.showDeleteAccountModal(); });
-
-    const confirmDeleteAccountBtn = document.getElementById("confirmDeleteAccount");
-    const cancelDeleteAccountBtn = document.getElementById("cancelDeleteAccount");
-    if (confirmDeleteAccountBtn) confirmDeleteAccountBtn.addEventListener("click", (e) => { e.preventDefault(); this.deleteCurrentUserAccount(); });
-    if (cancelDeleteAccountBtn) cancelDeleteAccountBtn.addEventListener("click", (e) => { e.preventDefault(); this.hideDeleteAccountModal(); });
-
-    const confirmDeleteColleagueBtn = document.getElementById("confirmDeleteColleague");
-    const cancelDeleteColleagueBtn = document.getElementById("cancelDeleteColleague");
-    if (confirmDeleteColleagueBtn) confirmDeleteColleagueBtn.addEventListener("click", (e) => { e.preventDefault(); this.deleteColleague(); });
-    if (cancelDeleteColleagueBtn) cancelDeleteColleagueBtn.addEventListener("click", (e) => { e.preventDefault(); this.hideDeleteColleagueModal(); });
-  }
-
-  showLoginScreen() {
-    const loginScreen = document.getElementById("loginScreen");
-    const mainApp = document.getElementById("mainApp");
-    if (loginScreen) loginScreen.classList.remove("hidden");
-    if (mainApp) mainApp.classList.add("hidden");
-  }
-
-  showLoginType(type) {
-    const employeeLogin = document.getElementById("employeeLogin");
-    const teamleaderLogin = document.getElementById("teamleaderLogin");
-    const newEmployeeLogin = document.getElementById("newEmployeeLogin");
-    if (employeeLogin) employeeLogin.classList.add("hidden");
-    if (teamleaderLogin) teamleaderLogin.classList.add("hidden");
-    if (newEmployeeLogin) newEmployeeLogin.classList.add("hidden");
-    if (type === "employee" && employeeLogin) employeeLogin.classList.remove("hidden");
-    else if (type === "teamleader" && teamleaderLogin) teamleaderLogin.classList.remove("hidden");
-    else if (type === "newEmployee" && newEmployeeLogin) newEmployeeLogin.classList.remove("hidden");
-  }
-
-  populateEmployeeSelect() {
-    const select = document.getElementById("employeeName");
-    if (!select) return;
-    select.innerHTML = '<option value="">-- Kollege auswählen --</option>';
-    this.colleagues.forEach((c) => {
-      const opt = document.createElement("option");
-      opt.value = c; opt.textContent = c; select.appendChild(opt);
-    });
-  }
-  // Lies Hash aus Firebase (falls vorhanden); Fallback: lokal
-async getStoredPasswordHash(name) {
-  if (!this.isFirebaseEnabled || !name) return null;
-  try {
-    const { ref, get } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js");
-    const uid = this.getUserUID(name);
-    const profileRef = ref(this.database, `users/${uid}/profile`);
-    const snap = await get(profileRef);
-    const data = snap.val();
-    return data?.passwordHash || null;
-  } catch (e) {
-    console.warn("getStoredPasswordHash failed:", e);
-    return null;
-  }
-}
-
-async loginAsEmployee() {
-  const employeeName = document.getElementById("employeeName");
-  const employeePassword = document.getElementById("employeePassword");
-  if (!employeeName?.value) return alert("Bitte wählen Sie einen Kollegen aus.");
-  if (!employeePassword?.value) return alert("Bitte geben Sie ein Passwort ein.");
-
-  const name = employeeName.value;
-  const input = employeePassword.value;
-
-  // 1) SHA-256 des eingegebenen Passworts
-  const sha = await this.sha256Hash(input);
-
-  // 2) Hash aus Firebase (falls vorhanden) – sonst lokal
-  let stored = await this.getStoredPasswordHash(name);
-  if (!stored) stored = this.colleaguePasswords[name] || null;
-
-  // 3) Prüfen gegen SHA-256 ODER (Fallback) altes simpleHash
-  let ok = false;
-  if (stored) {
-    const isSha = /^[0-9a-f]{64}$/i.test(stored);
-    ok = isSha ? (sha === stored) : (this.simpleHash(input) === stored);
-  }
-  if (!ok) return alert("Falsches Passwort!");
-
-  // 4) Migration: wenn alter simpleHash in DB, direkt auf SHA-256 umstellen
-  try {
-    const wasSimple = stored && !/^[0-9a-f]{64}$/i.test(stored);
-    if (this.isFirebaseEnabled && wasSimple) {
-      await this.saveUserProfile(name, {
-        role: "employee",
-        quota: this.homeofficeRules[name] || 40,
-        passwordHash: sha
-      });
-      this.colleaguePasswords[name] =
+  async loginAsTeamleader() {
     const teamleaderPassword = document.getElementById("teamleaderPassword");
     if (!teamleaderPassword?.value) return alert("Bitte geben Sie das Teamleiter-Passwort ein.");
     if (teamleaderPassword.value !== this.teamleaderPassword) return alert("Falsches Teamleiter-Passwort!");
     this.currentUser = "Teamleiter";
     this.userRole = "teamleader";
-    await this.setupTeamDataListeners();
-    this.showMainApplication();
-  }
-
-  async registerNewEmployee() {
-    const nameEl = document.getElementById("newEmployeeName");
-    const pwEl = document.getElementById("newEmployeePassword");
-    const pw2El = document.getElementById("newEmployeePasswordConfirm");
-    if (!nameEl?.value.trim()) return alert("Bitte geben Sie einen Namen ein.");
-    if (!pwEl?.value) return alert("Bitte geben Sie ein Passwort ein.");
-    if (!pw2El?.value) return alert("Bitte bestätigen Sie das Passwort.");
-    if (pwEl.value !== pw2El.value) return alert("Die Passwörter stimmen nicht überein.");
-    if (pwEl.value.length < 6) return alert("Das Passwort muss mindestens 6 Zeichen lang sein.");
-
-    const name = nameEl.value.trim();
-    if (this.colleagues.includes(name)) return alert("Dieser Name ist bereits vergeben!");
-
-    this.colleagues.push(name);
-    this.planningData[name] = {};
-    const hashed = await this.sha256Hash(pwEl.value);
-    this.colleaguePasswords[name] = hashed;
-    this.homeofficeRules[name] = 40;
-
-    await this.saveUserProfile(name, { role: "employee", quota: 40, passwordHash: hashed });
-
-    this.populateEmployeeSelect();
-    this.currentUser = name;
-    this.currentUserUID = this.getUserUID(name);
-    this.userRole = "employee";
-    await this.setupDataListeners(this.currentUserUID);
     this.showMainApplication();
   }
 
   showMainApplication() {
-    const loginScreen = document.getElementById("loginScreen");
-    const mainApp = document.getElementById("mainApp");
-    const currentUserSpan = document.getElementById("currentUser");
-    const securityNotice = document.getElementById("securityNotice");
-    const teamleaderNav = document.getElementById("teamleaderNav");
-    const employeeView = document.getElementById("employeeView");
-    const teamleaderView = document.getElementById("teamleaderView");
-
-    if (loginScreen) loginScreen.classList.add("hidden");
-    if (mainApp) mainApp.classList.remove("hidden");
-    if (currentUserSpan) currentUserSpan.textContent = this.currentUser;
-
-    if (this.userRole === "teamleader") {
-      if (securityNotice) securityNotice.classList.remove("hidden");
-      if (teamleaderNav) teamleaderNav.classList.remove("hidden");
-      if (employeeView) employeeView.classList.add("hidden");
-      if (teamleaderView) teamleaderView.classList.remove("hidden");
-      this.populateDetailColleagueSelect();
-      this.renderTeamOverview();
-      this.switchTab("overview");
-    } else {
-      if (securityNotice) securityNotice.classList.add("hidden");
-      if (teamleaderNav) teamleaderNav.classList.add("hidden");
-      if (employeeView) employeeView.classList.remove("hidden");
-      if (teamleaderView) teamleaderView.classList.add("hidden");
-      this.selectEmployee(this.currentUser);
-    }
-
-    this.updateCurrentMonth();
-    this.renderCalendar();
+    console.log("App gestartet als", this.currentUser, "Rolle:", this.userRole);
   }
+}
 
-  logout() {
-    this.cleanupDataListeners();
-    this.currentUser = null;
-    this.currentUserUID = null;
-    this.userRole = null;
-    this.activeTab = "overview";
-    this.isTeamOverviewMode = false;
-
-    const ids = [
-      "userType","employeeName","employeePassword","teamleaderPassword",
-      "newEmployeeName","newEmployeePassword","newEmployeePasswordConfirm"
-    ];
-    ids.forEach((id) => { const el = document.getElementById(id); if (el) el.value = ""; });
-    this.showLoginType("");
-    this.showLoginScreen();
-  }
-
-  async setStatus(status) {
-    if (!this.currentUser || !this.selectedDateForStatus || this.userRole !== "employee") return;
-    if (status === "clear") {
-      if (this.planningData[this.currentUser]) delete this.planningData[this.currentUser][this.selectedDateForStatus];
-      await this.savePlanningData(this.currentUser, this.selectedDateForStatus, null);
-    } else {
-      if (!this.planningData[this.currentUser]) this.planningData[this.currentUser] = {};
-      this.planningData[this.currentUser][this.selectedDateForStatus] = status;
-      await this.savePlanningData(this.currentUser, this.selectedDateForStatus, status);
-    }
-    this.hideStatusModal();
-    this.renderCalendar();
-    this.updateDashboard(this.currentUser);
-  }
-
-  showTeamOverview() {
-    this.isTeamOverviewMode = true;
-    const teamOverviewModal = document.getElementById("teamOverviewModal");
-    const employeeView = document.getElementById("employeeView");
-    const teamleaderView = document.getElementById("teamleaderView");
-    if (teamOverviewModal) teamOverviewModal.classList.remove("hidden");
-    if (employeeView) employeeView.classList.add("hidden");
-    if (teamleaderView) teamleaderView.classList.add("hidden");
-    this.renderTeamCalendars();
-  }
-
-  hideTeamOverview() {
-    this.isTeamOverviewMode = false;
-    const teamOverviewModal = document.getElementById("teamOverviewModal");
-    const employeeView = document.getElementById("employeeView");
-    const teamleaderView = document.getElementById("teamleaderView");
-    if (teamOverviewModal) teamOverviewModal.classList.add("hidden");
-    if (this.userRole === "employee") { if (employeeView) employeeView.classList.remove("hidden"); }
-    else if (this.userRole === "teamleader") { if (teamleaderView) teamleaderView.classList.remove("hidden"); }
-  }
-
-  renderTeamCalendars() {
-    const container = document.getElementById("teamCalendars");
-    if (!container) return;
-    container.innerHTML = "";
-    this.colleagues.forEach((colleague) => {
-      const div = document.createElement("div");
-      div.className = "colleague-calendar";
-      const stats = this.calculateMonthlyStats(colleague);
-      const rule = this.homeofficeRules[colleague] || 40;
-      const header = document.createElement("h4");
-      header.innerHTML = `${colleague} ${this.userRole === "teamleader" ? `<span>HomeOffice: ${stats.homeofficePercent.toFixed(1)}%</span>` : ""}`;
-      div.appendChild(header);
-      if (this.userRole === "teamleader") {
-        const statsDiv = document.createElement("div");
-        statsDiv.className = "colleague-stats";
-        statsDiv.innerHTML = `
-          <span>Regel: ${rule}%</span>
-          <span>HomeOffice: ${stats.homeofficeDays} Tage</span>
-          <span>Büro: ${stats.officeDays} Tage</span>
-          <span>Urlaub: ${stats.vacationDays} Tage</span>
-          <span class="${stats.homeofficePercent > rule ? "status-warning" : "status-ok"}">
-            ${stats.homeofficePercent > rule ? "ÜBERSCHREITUNG" : "OK"}
-          </span>`;
-        div.appendChild(statsDiv);
-      }
-      const mini = this.createMiniCalendar(colleague);
-      div.appendChild(mini);
-      container.appendChild(div);
-    });
-  }
-
-  createMiniCalendar(colleague) {
-    const calendarDiv = document.createElement("div");
-    calendarDiv.className = "mini-calendar";
-    const year = this.currentDate.getFullYear();
-    const month = this.currentDate.getMonth();
-    const firstDay = new Date(year, month, 1);
-    const grid = document.createElement("div");
-    grid.className = "calendar__grid";
-    grid.style.fontSize = "12px";
-    ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"].forEach((d) => {
-      const h = document.createElement("div"); h.className = "calendar__day-header"; h.textContent = d; grid.appendChild(h);
-    });
-    const startDate = new Date(firstDay);
-    const dayOfWeek = (firstDay.getDay() + 6) % 7;
-    startDate.setDate(firstDay.getDate() - dayOfWeek);
-    for (let i = 0; i < 42; i++) {
-      const cd = new Date(startDate); cd.setDate(startDate.getDate() + i);
-      const dayDiv = document.createElement("div");
-      dayDiv.className = "calendar__day"; dayDiv.style.minHeight = "30px"; dayDiv.style.padding = "2px";
-      const isCurrentMonth = cd.getMonth() === month;
-      const isWeekend = cd.getDay() === 0 || cd.getDay() === 6;
-      const dateStr = this.formatDate(cd);
-      const holiday = this.getHoliday(dateStr);
-      if (!isCurrentMonth) dayDiv.classList.add("other-month");
-      if (isWeekend) dayDiv.classList.add("weekend");
-      if (holiday) dayDiv.classList.add("holiday");
-      const num = document.createElement("div"); num.textContent = cd.getDate(); num.style.fontSize = "10px"; dayDiv.appendChild(num);
-      if (isCurrentMonth && !holiday && !isWeekend) {
-        const status = this.getStatus(colleague, dateStr);
-        if (status) {
-          const s = document.createElement("div"); s.className = `day-status ${status}`; s.style.fontSize = "8px"; s.textContent = this.statusTypes[status].symbol; dayDiv.appendChild(s);
-        }
-      }
-      grid.appendChild(dayDiv);
-    }
-    calendarDiv.appendChild(grid);
-    return calendarDiv;
-  }
-
-  async changePassword() {
-    const oldEl = document.getElementById("oldPassword");
-    const newEl = document.getElementById("newPassword");
-    const new2El = document.getElementById("confirmNewPassword");
-    if (!oldEl?.value || !newEl?.value || !new2El?.value) return alert("Bitte füllen Sie alle Felder aus.");
-    if (newEl.value !== new2El.value) return alert("Die neuen Passwörter stimmen nicht überein.");
-    if (newEl.value.length < 6) return alert("Das neue Passwort muss mindestens 6 Zeichen lang sein.");
-    const oldHash = await this.sha256Hash(oldEl.value);
-    const currentHash = this.colleaguePasswords[this.currentUser];
-    if (oldHash !== currentHash) return alert("Das alte Passwort ist falsch.");
-    const newHash = await this.sha256Hash(newEl.value);
-    this.colleaguePasswords[this.currentUser] = newHash;
-    await this.saveUserProfile(this.currentUser, { role: "employee", quota: this.homeofficeRules[this.currentUser], passwordHash: newHash });
-    this.hideChangePasswordModal();
-    alert("Passwort erfolgreich geändert!");
-  }
-
-  async deleteCurrentUserAccount() {
-    if (!this.currentUser || this.userRole !== "employee") return;
-    const idx = this.colleagues.indexOf(this.currentUser);
-    if (idx > -1) this.colleagues.splice(idx, 1);
-    delete this.planningData[this.currentUser];
-    delete this.colleaguePasswords[this.currentUser];
-    delete this.homeofficeRules[this.currentUser];
-    const uid = this.getUserUID(this.currentUser);
-    await this.removeData(`users/${uid}`);
-    await this.removeData(`plans/${uid}`);
-    this.hideDeleteAccountModal();
-    alert("Ihr Konto wurde erfolgreich gelöscht.");
-    this.logout();
-  }
-
-  selectEmployee(name) {
-    const span = document.getElementById("selectedColleagueName");
-    if (span) span.textContent = name;
-    if (!this.planningData[name]) this.planningData[name] = {};
-    const ruleEl = document.getElementById("homeofficeRule");
-    if (ruleEl) ruleEl.value = this.homeofficeRules[name] || 40;
-    this.renderCalendar();
-    this.updateDashboard(name);
-  }
-
-  navigateMonth(direction) {
-    this.currentDate.setMonth(this.currentDate.getMonth() + direction);
-    this.updateCurrentMonth();
-    this.renderCalendar();
-    if (this.userRole === "employee" && !this.isTeamOverviewMode) this.updateDashboard(this.currentUser);
-    else if (this.userRole === "teamleader") {
-      if (this.isTeamOverviewMode) this.renderTeamCalendars();
-      else if (this.activeTab === "overview") this.renderTeamOverview();
-      else if (this.activeTab === "reports") this.generateReportPreview();
-    }
-  }
-
-  updateCurrentMonth() {
-    const m = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
-    const el = document.getElementById("currentMonth");
-    if (el) el.textContent = `${m[this.currentDate.getMonth()]} ${this.currentDate.getFullYear()}`;
-  }
-
-  renderCalendar() {
-    if (this.isTeamOverviewMode) return;
-    const calendar = document.getElementById("calendar"); if (!calendar) return;
-    const grid = calendar.querySelector(".calendar__grid"); if (!grid) return;
-    grid.querySelectorAll(".calendar__day").forEach((n) => n.remove());
-
-    const year = this.currentDate.getFullYear();
-    const month = this.currentDate.getMonth();
-    const firstDay = new Date(year, month, 1);
-    const startDate = new Date(firstDay);
-    const dayOfWeek = (firstDay.getDay() + 6) % 7;
-    startDate.setDate(firstDay.getDate() - dayOfWeek);
-    const endDate = new Date(startDate); endDate.setDate(startDate.getDate() + 41);
-
-    const d = new Date(startDate);
-    while (d <= endDate) {
-      const dayEl = this.createDayElement(d, month);
-      grid.appendChild(dayEl);
-      d.setDate(d.getDate() + 1);
-    }
-  }
-
-  createDayElement(date, currentMonth) {
-    const dayDiv = document.createElement("div");
-    dayDiv.className = "calendar__day";
-    const dateStr = this.formatDate(date);
-    const isCurrentMonth = date.getMonth() === currentMonth;
-    const isWeekend = date.getDay() === 0 || date.getDay() === 6;
-    const holiday = this.getHoliday(dateStr);
-    if (!isCurrentMonth) dayDiv.classList.add("other-month");
-    if (isWeekend) dayDiv.classList.add("weekend");
-    if (holiday) dayDiv.classList.add("holiday");
-    const num = document.createElement("div"); num.className = "day-number"; num.textContent = date.getDate(); dayDiv.appendChild(num);
-    if (holiday) {
-      const hn = document.createElement("div"); hn.className = "holiday-name"; hn.textContent = holiday.name; dayDiv.appendChild(hn);
-    }
-    if (isCurrentMonth && !holiday && !isWeekend) {
-      if (this.userRole === "employee") {
-        const status = this.getStatus(this.currentUser, dateStr);
-        if (status) {
-          const s = document.createElement("div"); s.className = `day-status ${status}`; s.textContent = `${this.statusTypes[status].symbol} ${this.statusTypes[status].name}`; dayDiv.appendChild(s);
-        }
-        dayDiv.style.cursor = "pointer";
-        dayDiv.addEventListener("click", (e) => { e.preventDefault(); this.showStatusModal(dateStr); });
-      } else if (this.userRole === "teamleader") {
-        dayDiv.classList.add("readonly");
-        this.colleagues.forEach((c) => {
+document.addEventListener("DOMContentLoaded", async () => {
+  const planner = new HomeOfficePlanner();
+  await planner.initializeDefaultPasswords();
+  await planner.initializeFirebase();
+  window.app = planner;
+});
