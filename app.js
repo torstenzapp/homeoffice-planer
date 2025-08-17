@@ -1,781 +1,994 @@
-// HomeOffice-Planer mit Firebase Live-Sync
-// Firebase Config mit Ihren echten Daten
-const firebaseConfig = {
-  apiKey: "AIzaSyDdLYCXvtuXPUhehE-QfqaXWRfseGfwzf4",
-  authDomain: "homeoffice-planer-drv.firebaseapp.com",
-  databaseURL: "https://homeoffice-planer-drv-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "homeoffice-planer-drv",
-  storageBucket: "homeoffice-planer-drv.firebasestorage.app",
-  messagingSenderId: "669565818222",
-  appId: "1:669565818222:web:9eb342704c1a74c5eedd7f"
-};
+// HomeOffice-Planer - Complete App Logic
+class HomeOfficePlaner {
+    constructor() {
+        // Firebase Configuration
+        this.firebaseConfig = {
+            apiKey: "AIzaSyDdLYCXvtuXPUhehE-QfqaXWRfseGfwzf4",
+            authDomain: "homeoffice-planer-drv.firebaseapp.com",
+            databaseURL: "https://homeoffice-planer-drv-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "homeoffice-planer-drv",
+            storageBucket: "homeoffice-planer-drv.firebasestorage.app",
+            messagingSenderId: "669565818222",
+            appId: "1:669565818222:web:9eb342704c1a74c5eedd7f"
+        };
 
-// Global variables
-let app, database;
-let currentUser = null;
-let currentDate = new Date();
-let listeners = [];
+        // Current user data
+        this.currentUser = null;
+        this.currentDate = new Date();
+        this.currentMonth = new Date();
 
-// Feiertage Saarland 2025-2030
-const holidays = {
-  "2025": [
-    {"datum": "2025-01-01", "name": "Neujahr"},
-    {"datum": "2025-04-18", "name": "Karfreitag"},
-    {"datum": "2025-04-21", "name": "Ostermontag"},
-    {"datum": "2025-05-01", "name": "Tag der Arbeit"},
-    {"datum": "2025-05-29", "name": "Christi Himmelfahrt"},
-    {"datum": "2025-06-09", "name": "Pfingstmontag"},
-    {"datum": "2025-06-19", "name": "Fronleichnam"},
-    {"datum": "2025-08-15", "name": "Mariä Himmelfahrt"},
-    {"datum": "2025-10-03", "name": "Tag der Deutschen Einheit"},
-    {"datum": "2025-11-01", "name": "Allerheiligen"},
-    {"datum": "2025-12-25", "name": "1. Weihnachtsfeiertag"},
-    {"datum": "2025-12-26", "name": "2. Weihnachtsfeiertag"}
-  ],
-  "2026": [
-    {"datum": "2026-01-01", "name": "Neujahr"},
-    {"datum": "2026-04-03", "name": "Karfreitag"},
-    {"datum": "2026-04-06", "name": "Ostermontag"},
-    {"datum": "2026-05-01", "name": "Tag der Arbeit"},
-    {"datum": "2026-05-14", "name": "Christi Himmelfahrt"},
-    {"datum": "2026-05-25", "name": "Pfingstmontag"},
-    {"datum": "2026-06-04", "name": "Fronleichnam"},
-    {"datum": "2026-08-15", "name": "Mariä Himmelfahrt"},
-    {"datum": "2026-10-03", "name": "Tag der Deutschen Einheit"},
-    {"datum": "2026-11-01", "name": "Allerheiligen"},
-    {"datum": "2026-12-25", "name": "1. Weihnachtsfeiertag"},
-    {"datum": "2026-12-26", "name": "2. Weihnachtsfeiertag"}
-  ],
-  "2027": [
-    {"datum": "2027-01-01", "name": "Neujahr"},
-    {"datum": "2027-03-26", "name": "Karfreitag"},
-    {"datum": "2027-03-29", "name": "Ostermontag"},
-    {"datum": "2027-05-01", "name": "Tag der Arbeit"},
-    {"datum": "2027-05-06", "name": "Christi Himmelfahrt"},
-    {"datum": "2027-05-17", "name": "Pfingstmontag"},
-    {"datum": "2027-05-27", "name": "Fronleichnam"},
-    {"datum": "2027-08-15", "name": "Mariä Himmelfahrt"},
-    {"datum": "2027-10-03", "name": "Tag der Deutschen Einheit"},
-    {"datum": "2027-11-01", "name": "Allerheiligen"},
-    {"datum": "2027-12-25", "name": "1. Weihnachtsfeiertag"},
-    {"datum": "2027-12-26", "name": "2. Weihnachtsfeiertag"}
-  ],
-  "2028": [
-    {"datum": "2028-01-01", "name": "Neujahr"},
-    {"datum": "2028-04-14", "name": "Karfreitag"},
-    {"datum": "2028-04-17", "name": "Ostermontag"},
-    {"datum": "2028-05-01", "name": "Tag der Arbeit"},
-    {"datum": "2028-05-25", "name": "Christi Himmelfahrt"},
-    {"datum": "2028-06-05", "name": "Pfingstmontag"},
-    {"datum": "2028-06-15", "name": "Fronleichnam"},
-    {"datum": "2028-08-15", "name": "Mariä Himmelfahrt"},
-    {"datum": "2028-10-03", "name": "Tag der Deutschen Einheit"},
-    {"datum": "2028-11-01", "name": "Allerheiligen"},
-    {"datum": "2028-12-25", "name": "1. Weihnachtsfeiertag"},
-    {"datum": "2028-12-26", "name": "2. Weihnachtsfeiertag"}
-  ],
-  "2029": [
-    {"datum": "2029-01-01", "name": "Neujahr"},
-    {"datum": "2029-03-30", "name": "Karfreitag"},
-    {"datum": "2029-04-02", "name": "Ostermontag"},
-    {"datum": "2029-05-01", "name": "Tag der Arbeit"},
-    {"datum": "2029-05-10", "name": "Christi Himmelfahrt"},
-    {"datum": "2029-05-21", "name": "Pfingstmontag"},
-    {"datum": "2029-05-31", "name": "Fronleichnam"},
-    {"datum": "2029-08-15", "name": "Mariä Himmelfahrt"},
-    {"datum": "2029-10-03", "name": "Tag der Deutschen Einheit"},
-    {"datum": "2029-11-01", "name": "Allerheiligen"},
-    {"datum": "2029-12-25", "name": "1. Weihnachtsfeiertag"},
-    {"datum": "2029-12-26", "name": "2. Weihnachtsfeiertag"}
-  ],
-  "2030": [
-    {"datum": "2030-01-01", "name": "Neujahr"},
-    {"datum": "2030-04-19", "name": "Karfreitag"},
-    {"datum": "2030-04-22", "name": "Ostermontag"},
-    {"datum": "2030-05-01", "name": "Tag der Arbeit"},
-    {"datum": "2030-05-30", "name": "Christi Himmelfahrt"},
-    {"datum": "2030-06-10", "name": "Pfingstmontag"},
-    {"datum": "2030-06-20", "name": "Fronleichnam"},
-    {"datum": "2030-08-15", "name": "Mariä Himmelfahrt"},
-    {"datum": "2030-10-03", "name": "Tag der Deutschen Einheit"},
-    {"datum": "2030-11-01", "name": "Allerheiligen"},
-    {"datum": "2030-12-25", "name": "1. Weihnachtsfeiertag"},
-    {"datum": "2030-12-26", "name": "2. Weihnachtsfeiertag"}
-  ]
-};
+        // Holidays 2025-2030
+        this.holidays = this.generateHolidays();
 
-// Initialize app
-document.addEventListener('DOMContentLoaded', async function() {
-  console.log('App starting...');
-  
-  // Initialize Firebase
-  try {
-    app = firebase.initializeApp(firebaseConfig);
-    database = firebase.database();
-    console.log('Firebase initialized successfully');
-  } catch (error) {
-    console.error('Firebase initialization failed:', error);
-    showError('Firebase-Verbindung fehlgeschlagen');
-    return;
-  }
-  
-  // Initialize Service Worker
-  if ('serviceWorker' in navigator) {
-    try {
-      await navigator.serviceWorker.register('service-worker.js');
-      console.log('Service Worker registered');
-    } catch (error) {
-      console.log('Service Worker registration failed:', error);
+        // PWA Install prompt
+        this.deferredPrompt = null;
+
+        this.initializeFirebase();
     }
-  }
-  
-  setupEventListeners();
-  await loadUsers();
-});
 
-// Event Listeners
-function setupEventListeners() {
-  // User type selection
-  document.getElementById('userType').addEventListener('change', handleUserTypeChange);
-  
-  // Login buttons
-  document.getElementById('employeeLoginBtn').addEventListener('click', handleEmployeeLogin);
-  document.getElementById('teamleaderLoginBtn').addEventListener('click', handleTeamleaderLogin);
-  document.getElementById('newEmployeeRegisterBtn').addEventListener('click', handleNewEmployeeRegister);
-  
-  // Dashboard buttons
-  document.getElementById('logoutBtn').addEventListener('click', logout);
-  document.getElementById('teamOverviewBtn').addEventListener('click', showTeamOverview);
-  document.getElementById('changePasswordBtn').addEventListener('click', showPasswordModal);
-  document.getElementById('deleteAccountBtn').addEventListener('click', deleteAccount);
-  
-  // Calendar navigation
-  document.getElementById('prevMonthBtn').addEventListener('click', () => changeMonth(-1));
-  document.getElementById('nextMonthBtn').addEventListener('click', () => changeMonth(1));
-  
-  // Quota selection
-  document.getElementById('quotaSelect').addEventListener('change', handleQuotaChange);
-  
-  // Team overview
-  document.getElementById('backToMain').addEventListener('click', showDashboard);
-  
-  // Password modal
-  document.getElementById('savePasswordBtn').addEventListener('click', saveNewPassword);
-  document.getElementById('cancelPasswordBtn').addEventListener('click', hidePasswordModal);
-}
-
-// User type change handler
-function handleUserTypeChange(e) {
-  const value = e.target.value;
-  hideAllLoginForms();
-  
-  if (value === 'employee') {
-    document.getElementById('employeeLogin').classList.remove('hidden');
-  } else if (value === 'teamleader') {
-    document.getElementById('teamleaderLogin').classList.remove('hidden');
-  } else if (value === 'newEmployee') {
-    document.getElementById('newEmployeeForm').classList.remove('hidden');
-  }
-}
-
-function hideAllLoginForms() {
-  document.getElementById('employeeLogin').classList.add('hidden');
-  document.getElementById('teamleaderLogin').classList.add('hidden');
-  document.getElementById('newEmployeeForm').classList.add('hidden');
-  document.getElementById('errorMessage').classList.add('hidden');
-}
-
-// Load users from Firebase
-async function loadUsers() {
-  try {
-    const snapshot = await database.ref('users').once('value');
-    const users = snapshot.val() || {};
-    
-    const employeeSelect = document.getElementById('employeeName');
-    employeeSelect.innerHTML = '<option value="">-- Kollege auswählen --</option>';
-    
-    Object.keys(users).forEach(userId => {
-      const user = users[userId];
-      if (user.profile && user.profile.role === 'employee') {
-        const option = document.createElement('option');
-        option.value = userId;
-        option.textContent = user.profile.name;
-        employeeSelect.appendChild(option);
-      }
-    });
-  } catch (error) {
-    console.error('Error loading users:', error);
-  }
-}
-
-// Hash password with SHA-256
-async function hashPassword(password) {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password);
-  const hash = await crypto.subtle.digest('SHA-256', data);
-  return Array.from(new Uint8Array(hash))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
-}
-
-// Employee login
-async function handleEmployeeLogin() {
-  const userId = document.getElementById('employeeName').value;
-  const password = document.getElementById('employeePassword').value;
-  
-  if (!userId || !password) {
-    showError('Bitte wählen Sie einen Namen und geben Sie das Passwort ein');
-    return;
-  }
-  
-  try {
-    const hashedPassword = await hashPassword(password);
-    const snapshot = await database.ref(`users/${userId}/profile`).once('value');
-    const profile = snapshot.val();
-    
-    if (!profile) {
-      showError('Benutzer nicht gefunden');
-      return;
+    initializeFirebase() {
+        try {
+            // Initialize Firebase only if not already initialized
+            if (!firebase.apps.length) {
+                firebase.initializeApp(this.firebaseConfig);
+            }
+            this.db = firebase.database();
+            this.auth = firebase.auth();
+            console.log('Firebase initialized successfully');
+            this.init();
+        } catch (error) {
+            console.error('Firebase initialization failed:', error);
+            // Continue without Firebase for testing
+            this.init();
+        }
     }
-    
-    if (profile.passwordHash !== hashedPassword) {
-      showError('Passwort falsch');
-      return;
+
+    init() {
+        this.setupEventListeners();
+        this.setupPWAInstall();
+        this.renderCalendar();
+        console.log('HomeOffice-Planer initialized');
     }
-    
-    currentUser = {
-      id: userId,
-      name: profile.name,
-      role: 'employee',
-      quota: profile.quota || 40
-    };
-    
-    showDashboard();
-  } catch (error) {
-    console.error('Login error:', error);
-    showError('Anmeldung fehlgeschlagen');
-  }
-}
 
-// Teamleader login
-async function handleTeamleaderLogin() {
-  const password = document.getElementById('teamleaderPassword').value;
-  
-  if (!password) {
-    showError('Bitte geben Sie das Teamleiter-Passwort ein');
-    return;
-  }
-  
-  const hashedPassword = await hashPassword(password);
-  const expectedHash = await hashPassword('teamleiter123');
-  
-  if (hashedPassword !== expectedHash) {
-    showError('Teamleiter-Passwort falsch');
-    return;
-  }
-  
-  currentUser = {
-    id: 'teamleader',
-    name: 'Teamleiter',
-    role: 'teamleader',
-    quota: 60
-  };
-  
-  showDashboard();
-}
+    setupEventListeners() {
+        // Login buttons
+        document.getElementById('kollegeBtn').addEventListener('click', (e) => {
+            e.preventDefault();
+            console.log('Kollege button clicked');
+            this.showPasswordModal('kollege');
+        });
+        
+        document.getElementById('teamleiterBtn').addEventListener('click', (e) => {
+            e.preventDefault();
+            console.log('Teamleiter button clicked');
+            this.showPasswordModal('teamleiter');
+        });
+        
+        document.getElementById('neuerKollegeBtn').addEventListener('click', (e) => {
+            e.preventDefault();
+            console.log('Neuer Kollege button clicked');
+            this.showRegistrationModal();
+        });
 
-// New employee registration
-async function handleNewEmployeeRegister() {
-  const name = document.getElementById('newEmployeeName').value.trim();
-  const password = document.getElementById('newEmployeePassword').value;
-  const passwordConfirm = document.getElementById('newEmployeePasswordConfirm').value;
-  
-  if (!name || !password || !passwordConfirm) {
-    showError('Bitte füllen Sie alle Felder aus');
-    return;
-  }
-  
-  if (password !== passwordConfirm) {
-    showError('Passwörter stimmen nicht überein');
-    return;
-  }
-  
-  try {
-    const userId = name.toLowerCase().replace(/\s+/g, '-');
-    const hashedPassword = await hashPassword(password);
-    
-    // Check if user already exists
-    const existingUser = await database.ref(`users/${userId}`).once('value');
-    if (existingUser.val()) {
-      showError('Benutzer existiert bereits');
-      return;
+        // Password modal
+        document.getElementById('passwordSubmitBtn').addEventListener('click', () => this.handlePasswordSubmit());
+        document.getElementById('passwordCancelBtn').addEventListener('click', () => this.hideModal('passwordModal'));
+        document.getElementById('passwordInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') this.handlePasswordSubmit();
+        });
+
+        // Registration modal
+        document.getElementById('registerSubmitBtn').addEventListener('click', () => this.handleRegistration());
+        document.getElementById('registerCancelBtn').addEventListener('click', () => this.hideModal('registrationModal'));
+
+        // Header actions
+        document.getElementById('passwordChangeBtn').addEventListener('click', () => this.showModal('passwordChangeModal'));
+        document.getElementById('accountDeleteBtn').addEventListener('click', () => this.showModal('accountDeleteModal'));
+        document.getElementById('logoutBtn').addEventListener('click', () => this.logout());
+
+        // Password change modal
+        document.getElementById('passwordChangeSubmitBtn').addEventListener('click', () => this.handlePasswordChange());
+        document.getElementById('passwordChangeCancelBtn').addEventListener('click', () => this.hideModal('passwordChangeModal'));
+
+        // Account delete modal
+        document.getElementById('accountDeleteConfirmBtn').addEventListener('click', () => this.handleAccountDelete());
+        document.getElementById('accountDeleteCancelBtn').addEventListener('click', () => this.hideModal('accountDeleteModal'));
+
+        // Navigation tabs
+        document.querySelectorAll('.nav-tab').forEach(tab => {
+            tab.addEventListener('click', () => this.switchTab(tab.dataset.tab));
+        });
+
+        // Calendar navigation
+        document.getElementById('prevMonth').addEventListener('click', () => this.changeMonth(-1));
+        document.getElementById('nextMonth').addEventListener('click', () => this.changeMonth(1));
+
+        // Quota rule change
+        document.getElementById('quotaRule').addEventListener('change', () => this.updateQuotaDisplay());
+
+        // Team leader functions
+        const resetColleagueBtn = document.getElementById('resetColleagueBtn');
+        if (resetColleagueBtn) {
+            resetColleagueBtn.addEventListener('click', () => this.showModal('resetColleagueModal'));
+        }
+        
+        const resetColleagueConfirmBtn = document.getElementById('resetColleagueConfirmBtn');
+        if (resetColleagueConfirmBtn) {
+            resetColleagueConfirmBtn.addEventListener('click', () => this.handleColleagueReset());
+        }
+        
+        const resetColleagueCancelBtn = document.getElementById('resetColleagueCancelBtn');
+        if (resetColleagueCancelBtn) {
+            resetColleagueCancelBtn.addEventListener('click', () => this.hideModal('resetColleagueModal'));
+        }
+
+        console.log('Event listeners set up successfully');
     }
-    
-    // Create new user
-    await database.ref(`users/${userId}`).set({
-      profile: {
-        name: name,
-        role: 'employee',
-        quota: 40,
-        passwordHash: hashedPassword,
-        createdAt: new Date().toISOString()
-      }
-    });
-    
-    currentUser = {
-      id: userId,
-      name: name,
-      role: 'employee',
-      quota: 40
-    };
-    
-    await loadUsers(); // Refresh user list
-    showDashboard();
-  } catch (error) {
-    console.error('Registration error:', error);
-    showError('Registrierung fehlgeschlagen');
-  }
-}
 
-// Show dashboard
-function showDashboard() {
-  document.getElementById('loginScreen').classList.add('hidden');
-  document.getElementById('dashboardScreen').classList.remove('hidden');
-  document.getElementById('teamOverviewScreen').classList.add('hidden');
-  
-  document.getElementById('dashboardTitle').textContent = `Willkommen, ${currentUser.name}`;
-  document.getElementById('quotaSelect').value = currentUser.quota;
-  
-  renderCalendar();
-  updateQuotaDisplay();
-  
-  // Hide team management buttons for regular employees
-  if (currentUser.role !== 'teamleader') {
-    // Show team overview button for all users
-  }
-}
+    setupPWAInstall() {
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            this.deferredPrompt = e;
+            document.getElementById('installPrompt').classList.remove('hidden');
+        });
 
-// Show team overview
-function showTeamOverview() {
-  document.getElementById('loginScreen').classList.add('hidden');
-  document.getElementById('dashboardScreen').classList.add('hidden');
-  document.getElementById('teamOverviewScreen').classList.remove('hidden');
-  
-  renderTeamOverview();
-}
+        const installBtn = document.getElementById('installBtn');
+        if (installBtn) {
+            installBtn.addEventListener('click', () => {
+                if (this.deferredPrompt) {
+                    this.deferredPrompt.prompt();
+                    this.deferredPrompt.userChoice.then(() => {
+                        this.deferredPrompt = null;
+                        document.getElementById('installPrompt').classList.add('hidden');
+                    });
+                }
+            });
+        }
 
-// Render calendar
-async function renderCalendar() {
-  const calendar = document.getElementById('calendar');
-  const monthHeader = document.getElementById('currentMonth');
-  
-  const year = currentDate.getFullYear();
-  const month = currentDate.getMonth();
-  
-  monthHeader.textContent = currentDate.toLocaleDateString('de-DE', {
-    month: 'long',
-    year: 'numeric'
-  });
-  
-  // Clear calendar
-  calendar.innerHTML = '';
-  
-  // Add day headers
-  const dayHeaders = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
-  dayHeaders.forEach(day => {
-    const header = document.createElement('div');
-    header.className = 'calendar-day-header';
-    header.textContent = day;
-    calendar.appendChild(header);
-  });
-  
-  // Get first day of month (Monday = 0)
-  const firstDay = new Date(year, month, 1);
-  const lastDay = new Date(year, month + 1, 0);
-  const startDate = new Date(firstDay);
-  startDate.setDate(startDate.getDate() - (firstDay.getDay() + 6) % 7);
-  
-  // Load user plans for current month
-  let userPlans = {};
-  try {
-    const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
-    const snapshot = await database.ref(`plans/${currentUser.id}/${monthKey}`).once('value');
-    userPlans = snapshot.val() || {};
-  } catch (error) {
-    console.error('Error loading plans:', error);
-  }
-  
-  // Create calendar days
-  for (let i = 0; i < 42; i++) {
-    const cellDate = new Date(startDate);
-    cellDate.setDate(startDate.getDate() + i);
-    
-    const day = document.createElement('div');
-    day.className = 'calendar-day';
-    day.textContent = cellDate.getDate();
-    
-    const dateKey = cellDate.toISOString().split('T')[0];
-    
-    // Check if date is in current month
-    if (cellDate.getMonth() !== month) {
-      day.style.opacity = '0.3';
-      day.style.cursor = 'default';
-    } else {
-      // Check if holiday
-      const holidayYear = cellDate.getFullYear().toString();
-      const isHoliday = holidays[holidayYear]?.some(h => h.datum === dateKey);
-      
-      if (isHoliday) {
-        day.classList.add('holiday');
-      } else {
-        // Check if today
+        const dismissInstallBtn = document.getElementById('dismissInstallBtn');
+        if (dismissInstallBtn) {
+            dismissInstallBtn.addEventListener('click', () => {
+                document.getElementById('installPrompt').classList.add('hidden');
+            });
+        }
+    }
+
+    async hashPassword(password) {
+        try {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(password);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        } catch (error) {
+            console.error('Password hashing failed:', error);
+            return password; // Fallback for testing
+        }
+    }
+
+    showModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            modal.classList.remove('hidden');
+            console.log('Showing modal:', modalId);
+        }
+    }
+
+    hideModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            modal.classList.add('hidden');
+            // Clear form inputs
+            const inputs = modal.querySelectorAll('input');
+            inputs.forEach(input => input.value = '');
+            console.log('Hiding modal:', modalId);
+        }
+    }
+
+    showPasswordModal(userType) {
+        this.pendingUserType = userType;
+        document.getElementById('passwordModalTitle').textContent = 
+            userType === 'kollege' ? 'Kollege Anmeldung' : 'Teamleiter Anmeldung';
+        this.showModal('passwordModal');
+        setTimeout(() => {
+            document.getElementById('passwordInput').focus();
+        }, 100);
+    }
+
+    showRegistrationModal() {
+        this.showModal('registrationModal');
+        setTimeout(() => {
+            document.getElementById('newColleagueName').focus();
+        }, 100);
+    }
+
+    async handlePasswordSubmit() {
+        const password = document.getElementById('passwordInput').value;
+        if (!password) {
+            alert('Bitte Passwort eingeben');
+            return;
+        }
+
+        console.log('Attempting login for:', this.pendingUserType);
+        
+        const hashedPassword = await this.hashPassword(password);
+        
+        try {
+            if (this.pendingUserType === 'kollege') {
+                await this.loginKollege(hashedPassword, password);
+            } else if (this.pendingUserType === 'teamleiter') {
+                await this.loginTeamleiter(hashedPassword, password);
+            }
+        } catch (error) {
+            console.error('Login error:', error);
+            alert('Anmeldung fehlgeschlagen: ' + error.message);
+        }
+    }
+
+    async loginKollege(hashedPassword, originalPassword) {
+        try {
+            if (this.db) {
+                const snapshot = await this.db.ref('users').once('value');
+                const users = snapshot.val() || {};
+                
+                let foundUser = null;
+                for (const [userId, userData] of Object.entries(users)) {
+                    if (userData.password === hashedPassword && userData.role === 'kollege') {
+                        foundUser = { id: userId, ...userData };
+                        break;
+                    }
+                }
+
+                if (foundUser) {
+                    this.currentUser = foundUser;
+                    this.hideModal('passwordModal');
+                    this.showAppScreen();
+                    return;
+                }
+            }
+            
+            // Demo mode fallback for testing
+            if (originalPassword === 'demo' || originalPassword === 'kollege') {
+                this.currentUser = {
+                    id: 'demo_kollege',
+                    name: 'Demo Kollege',
+                    role: 'kollege',
+                    password: hashedPassword,
+                    quotaRule: 40
+                };
+                this.hideModal('passwordModal');
+                this.showAppScreen();
+                return;
+            }
+            
+            throw new Error('Ungültiges Passwort oder Benutzer nicht gefunden');
+        } catch (error) {
+            console.error('Kollege login error:', error);
+            throw error;
+        }
+    }
+
+    async loginTeamleiter(hashedPassword, originalPassword) {
+        try {
+            if (this.db) {
+                const snapshot = await this.db.ref('users').once('value');
+                const users = snapshot.val() || {};
+                
+                let foundUser = null;
+                for (const [userId, userData] of Object.entries(users)) {
+                    if (userData.password === hashedPassword && userData.role === 'teamleiter') {
+                        foundUser = { id: userId, ...userData };
+                        break;
+                    }
+                }
+
+                if (foundUser) {
+                    this.currentUser = foundUser;
+                    this.hideModal('passwordModal');
+                    this.showAppScreen();
+                    return;
+                }
+            }
+            
+            // Demo mode fallback for testing
+            if (originalPassword === 'demo' || originalPassword === 'teamleiter') {
+                this.currentUser = {
+                    id: 'demo_teamleiter',
+                    name: 'Demo Teamleiter',
+                    role: 'teamleiter',
+                    password: hashedPassword,
+                    quotaRule: 40
+                };
+                this.hideModal('passwordModal');
+                this.showAppScreen();
+                return;
+            }
+            
+            throw new Error('Ungültiges Passwort oder Benutzer nicht gefunden');
+        } catch (error) {
+            console.error('Teamleiter login error:', error);
+            throw error;
+        }
+    }
+
+    async handleRegistration() {
+        const name = document.getElementById('newColleagueName').value.trim();
+        const password = document.getElementById('newColleaguePassword').value;
+        const passwordConfirm = document.getElementById('newColleaguePasswordConfirm').value;
+
+        if (!name || !password || !passwordConfirm) {
+            alert('Bitte alle Felder ausfüllen');
+            return;
+        }
+
+        if (password !== passwordConfirm) {
+            alert('Passwörter stimmen nicht überein');
+            return;
+        }
+
+        if (password.length < 3) {
+            alert('Passwort muss mindestens 3 Zeichen lang sein');
+            return;
+        }
+
+        try {
+            const hashedPassword = await this.hashPassword(password);
+            const userId = 'user_' + Date.now();
+            
+            const userData = {
+                name: name,
+                password: hashedPassword,
+                role: 'kollege',
+                quotaRule: 40,
+                createdAt: new Date().toISOString()
+            };
+
+            if (this.db) {
+                await this.db.ref(`users/${userId}`).set(userData);
+            }
+            
+            this.currentUser = { id: userId, ...userData };
+            this.hideModal('registrationModal');
+            this.showAppScreen();
+            
+            console.log('User registered successfully:', userData);
+        } catch (error) {
+            console.error('Registration error:', error);
+            alert('Registrierung fehlgeschlagen: ' + error.message);
+        }
+    }
+
+    async handlePasswordChange() {
+        const currentPassword = document.getElementById('currentPassword').value;
+        const newPassword = document.getElementById('newPassword').value;
+        const newPasswordConfirm = document.getElementById('newPasswordConfirm').value;
+
+        if (!currentPassword || !newPassword || !newPasswordConfirm) {
+            alert('Bitte alle Felder ausfüllen');
+            return;
+        }
+
+        if (newPassword !== newPasswordConfirm) {
+            alert('Neue Passwörter stimmen nicht überein');
+            return;
+        }
+
+        if (newPassword.length < 3) {
+            alert('Neues Passwort muss mindestens 3 Zeichen lang sein');
+            return;
+        }
+
+        try {
+            const currentHashed = await this.hashPassword(currentPassword);
+            if (currentHashed !== this.currentUser.password) {
+                alert('Aktuelles Passwort ist falsch');
+                return;
+            }
+
+            const newHashed = await this.hashPassword(newPassword);
+            
+            if (this.db) {
+                await this.db.ref(`users/${this.currentUser.id}/password`).set(newHashed);
+            }
+            
+            this.currentUser.password = newHashed;
+            this.hideModal('passwordChangeModal');
+            alert('Passwort erfolgreich geändert');
+        } catch (error) {
+            console.error('Password change error:', error);
+            alert('Passwort ändern fehlgeschlagen: ' + error.message);
+        }
+    }
+
+    async handleAccountDelete() {
+        const password = document.getElementById('deleteAccountPassword').value;
+        
+        if (!password) {
+            alert('Bitte Passwort eingeben');
+            return;
+        }
+
+        try {
+            const hashedPassword = await this.hashPassword(password);
+            if (hashedPassword !== this.currentUser.password) {
+                alert('Passwort ist falsch');
+                return;
+            }
+
+            if (confirm('Sind Sie wirklich sicher? Diese Aktion kann nicht rückgängig gemacht werden.')) {
+                if (this.db) {
+                    await this.db.ref(`users/${this.currentUser.id}`).remove();
+                    await this.db.ref(`schedules/${this.currentUser.id}`).remove();
+                }
+                
+                this.logout();
+                alert('Account wurde gelöscht');
+            }
+        } catch (error) {
+            console.error('Account delete error:', error);
+            alert('Account löschen fehlgeschlagen: ' + error.message);
+        }
+    }
+
+    async handleColleagueReset() {
+        const colleagueId = document.getElementById('resetColleagueSelect').value;
+        
+        if (!colleagueId) {
+            alert('Bitte Kollege auswählen');
+            return;
+        }
+
+        if (confirm('Alle Daten des Kollegen werden zurückgesetzt. Fortfahren?')) {
+            try {
+                if (this.db) {
+                    await this.db.ref(`schedules/${colleagueId}`).remove();
+                    await this.db.ref(`users/${colleagueId}/quotaRule`).set(40);
+                }
+                
+                this.hideModal('resetColleagueModal');
+                alert('Kollege wurde zurückgesetzt');
+                this.loadTeamOverview();
+            } catch (error) {
+                console.error('Colleague reset error:', error);
+                alert('Zurücksetzen fehlgeschlagen: ' + error.message);
+            }
+        }
+    }
+
+    showAppScreen() {
+        console.log('Showing app screen for user:', this.currentUser);
+        
+        document.getElementById('loginScreen').classList.add('hidden');
+        document.getElementById('appScreen').classList.remove('hidden');
+        document.getElementById('headerActions').style.display = 'flex';
+        
+        // Update user info
+        document.getElementById('userName').textContent = this.currentUser.name;
+        document.getElementById('userRole').textContent = 
+            this.currentUser.role === 'teamleiter' ? 'Teamleiter' : 'Kollege';
+
+        // Show/hide team tab based on role
+        const teamNavTab = document.getElementById('teamNavTab');
+        if (teamNavTab) {
+            if (this.currentUser.role === 'teamleiter') {
+                teamNavTab.style.display = 'block';
+            } else {
+                teamNavTab.style.display = 'none';
+            }
+        }
+
+        // Load user's quota rule
+        const quotaRule = document.getElementById('quotaRule');
+        if (quotaRule) {
+            quotaRule.value = this.currentUser.quotaRule || 40;
+        }
+        
+        this.renderCalendar();
+        this.updateQuotaDisplay();
+    }
+
+    logout() {
+        console.log('Logging out user');
+        this.currentUser = null;
+        document.getElementById('loginScreen').classList.remove('hidden');
+        document.getElementById('appScreen').classList.add('hidden');
+        document.getElementById('headerActions').style.display = 'none';
+        
+        // Reset to calendar tab
+        this.switchTab('calendar');
+    }
+
+    switchTab(tabName) {
+        console.log('Switching to tab:', tabName);
+        
+        // Update nav tabs
+        document.querySelectorAll('.nav-tab').forEach(tab => {
+            tab.classList.remove('active');
+        });
+        const activeTab = document.querySelector(`[data-tab="${tabName}"]`);
+        if (activeTab) {
+            activeTab.classList.add('active');
+        }
+
+        // Update tab content
+        document.querySelectorAll('.tab-content').forEach(content => {
+            content.classList.remove('active');
+            content.classList.add('hidden');
+        });
+        
+        const targetTab = document.getElementById(tabName + 'Tab');
+        if (targetTab) {
+            targetTab.classList.add('active');
+            targetTab.classList.remove('hidden');
+        }
+
+        if (tabName === 'team') {
+            this.loadTeamOverview();
+        }
+    }
+
+    changeMonth(direction) {
+        this.currentMonth.setMonth(this.currentMonth.getMonth() + direction);
+        this.renderCalendar();
+        this.updateQuotaDisplay();
+    }
+
+    renderCalendar() {
+        const monthNames = [
+            'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
+            'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'
+        ];
+
+        const currentMonthEl = document.getElementById('currentMonth');
+        if (currentMonthEl) {
+            currentMonthEl.textContent = 
+                `${monthNames[this.currentMonth.getMonth()]} ${this.currentMonth.getFullYear()}`;
+        }
+
+        const firstDay = new Date(this.currentMonth.getFullYear(), this.currentMonth.getMonth(), 1);
+        const lastDay = new Date(this.currentMonth.getFullYear(), this.currentMonth.getMonth() + 1, 0);
+        const startDate = new Date(firstDay);
+        startDate.setDate(startDate.getDate() - (firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1));
+
+        const calendarDays = document.getElementById('calendarDays');
+        if (!calendarDays) return;
+        
+        calendarDays.innerHTML = '';
+
+        for (let i = 0; i < 42; i++) {
+            const currentDate = new Date(startDate);
+            currentDate.setDate(startDate.getDate() + i);
+            
+            const dayElement = document.createElement('div');
+            dayElement.className = 'calendar-day';
+            dayElement.textContent = currentDate.getDate();
+            
+            const dateStr = this.formatDate(currentDate);
+            
+            // Add classes
+            if (currentDate.getMonth() !== this.currentMonth.getMonth()) {
+                dayElement.classList.add('other-month');
+            }
+            
+            if (this.isToday(currentDate)) {
+                dayElement.classList.add('today');
+            }
+            
+            if (this.isWeekend(currentDate)) {
+                dayElement.classList.add('weekend');
+            }
+            
+            if (this.isHoliday(currentDate)) {
+                dayElement.classList.add('holiday');
+            }
+            
+            // Load schedule status
+            if (this.currentUser && currentDate.getMonth() === this.currentMonth.getMonth()) {
+                this.loadDayStatus(dateStr, dayElement);
+            }
+            
+            // Add click handler for current month workdays only
+            if (currentDate.getMonth() === this.currentMonth.getMonth() && 
+                !this.isWeekend(currentDate) && 
+                !this.isHoliday(currentDate)) {
+                dayElement.style.cursor = 'pointer';
+                dayElement.addEventListener('click', () => this.toggleDayStatus(dateStr, dayElement));
+            }
+            
+            calendarDays.appendChild(dayElement);
+        }
+    }
+
+    async loadDayStatus(dateStr, dayElement) {
+        try {
+            // Use local storage as fallback if Firebase is not available
+            if (this.db) {
+                const snapshot = await this.db.ref(`schedules/${this.currentUser.id}/${dateStr}`).once('value');
+                const status = snapshot.val();
+                
+                if (status === 'homeoffice') {
+                    dayElement.classList.add('homeoffice');
+                } else if (status === 'office') {
+                    dayElement.classList.add('office');
+                }
+            } else {
+                // Local fallback
+                const localData = JSON.parse(localStorage.getItem(`schedule_${this.currentUser.id}`) || '{}');
+                const status = localData[dateStr];
+                
+                if (status === 'homeoffice') {
+                    dayElement.classList.add('homeoffice');
+                } else if (status === 'office') {
+                    dayElement.classList.add('office');
+                }
+            }
+        } catch (error) {
+            console.error('Error loading day status:', error);
+        }
+    }
+
+    async toggleDayStatus(dateStr, dayElement) {
+        if (!this.currentUser) return;
+        
+        let newStatus = '';
+        if (dayElement.classList.contains('homeoffice')) {
+            newStatus = 'office';
+        } else if (dayElement.classList.contains('office')) {
+            newStatus = '';
+        } else {
+            newStatus = 'homeoffice';
+        }
+        
+        try {
+            if (this.db) {
+                if (newStatus) {
+                    await this.db.ref(`schedules/${this.currentUser.id}/${dateStr}`).set(newStatus);
+                } else {
+                    await this.db.ref(`schedules/${this.currentUser.id}/${dateStr}`).remove();
+                }
+            } else {
+                // Local fallback
+                const localData = JSON.parse(localStorage.getItem(`schedule_${this.currentUser.id}`) || '{}');
+                if (newStatus) {
+                    localData[dateStr] = newStatus;
+                } else {
+                    delete localData[dateStr];
+                }
+                localStorage.setItem(`schedule_${this.currentUser.id}`, JSON.stringify(localData));
+            }
+            
+            // Update UI
+            dayElement.classList.remove('homeoffice', 'office');
+            if (newStatus) {
+                dayElement.classList.add(newStatus);
+            }
+            
+            this.updateQuotaDisplay();
+        } catch (error) {
+            console.error('Error saving day status:', error);
+            alert('Fehler beim Speichern: ' + error.message);
+        }
+    }
+
+    async updateQuotaDisplay() {
+        if (!this.currentUser) return;
+        
+        const quotaRule = parseInt(document.getElementById('quotaRule').value);
+        
+        // Save quota rule
+        if (quotaRule !== this.currentUser.quotaRule) {
+            this.currentUser.quotaRule = quotaRule;
+            if (this.db) {
+                try {
+                    await this.db.ref(`users/${this.currentUser.id}/quotaRule`).set(quotaRule);
+                } catch (error) {
+                    console.error('Error saving quota rule:', error);
+                }
+            }
+        }
+        
+        try {
+            let schedules = {};
+            
+            if (this.db) {
+                const snapshot = await this.db.ref(`schedules/${this.currentUser.id}`).once('value');
+                schedules = snapshot.val() || {};
+            } else {
+                // Local fallback
+                schedules = JSON.parse(localStorage.getItem(`schedule_${this.currentUser.id}`) || '{}');
+            }
+            
+            const currentYear = this.currentMonth.getFullYear();
+            const currentMonthNum = this.currentMonth.getMonth();
+            
+            let homeOfficeDays = 0;
+            let officeDays = 0;
+            let totalWorkDays = 0;
+            
+            // Count days in current month
+            const firstDay = new Date(currentYear, currentMonthNum, 1);
+            const lastDay = new Date(currentYear, currentMonthNum + 1, 0);
+            
+            for (let day = 1; day <= lastDay.getDate(); day++) {
+                const date = new Date(currentYear, currentMonthNum, day);
+                const dateStr = this.formatDate(date);
+                
+                if (!this.isWeekend(date) && !this.isHoliday(date)) {
+                    totalWorkDays++;
+                    const status = schedules[dateStr];
+                    if (status === 'homeoffice') {
+                        homeOfficeDays++;
+                    } else if (status === 'office') {
+                        officeDays++;
+                    }
+                }
+            }
+            
+            const percentage = totalWorkDays > 0 ? Math.round((homeOfficeDays / totalWorkDays) * 100) : 0;
+            
+            document.getElementById('homeOfficeDays').textContent = homeOfficeDays;
+            document.getElementById('officeDays').textContent = officeDays;
+            
+            const quotaElement = document.getElementById('quotaPercentage');
+            quotaElement.textContent = percentage + '%';
+            
+            // Color coding
+            quotaElement.classList.remove('status--success', 'status--warning', 'status--error');
+            if (percentage <= quotaRule) {
+                quotaElement.classList.add('status--success');
+            } else if (percentage <= quotaRule + 10) {
+                quotaElement.classList.add('status--warning');
+            } else {
+                quotaElement.classList.add('status--error');
+            }
+        } catch (error) {
+            console.error('Error updating quota display:', error);
+        }
+    }
+
+    async loadTeamOverview() {
+        if (this.currentUser.role !== 'teamleiter') return;
+        
+        try {
+            let users = {};
+            let schedules = {};
+            
+            if (this.db) {
+                const usersSnapshot = await this.db.ref('users').once('value');
+                users = usersSnapshot.val() || {};
+                
+                const schedulesSnapshot = await this.db.ref('schedules').once('value');
+                schedules = schedulesSnapshot.val() || {};
+            } else {
+                // Demo data for testing
+                users = {
+                    'demo_kollege_1': { name: 'Demo Kollege 1', role: 'kollege', quotaRule: 40 },
+                    'demo_kollege_2': { name: 'Demo Kollege 2', role: 'kollege', quotaRule: 60 }
+                };
+            }
+            
+            const teamList = document.getElementById('teamList');
+            if (!teamList) return;
+            
+            teamList.innerHTML = '';
+            
+            // Show team controls
+            const teamControls = document.getElementById('teamControls');
+            if (teamControls) {
+                teamControls.style.display = 'block';
+            }
+            
+            // Populate reset dropdown
+            const resetSelect = document.getElementById('resetColleagueSelect');
+            if (resetSelect) {
+                resetSelect.innerHTML = '<option value="">Kollege wählen...</option>';
+            }
+            
+            for (const [userId, userData] of Object.entries(users)) {
+                if (userData.role === 'kollege') {
+                    if (resetSelect) {
+                        const option = document.createElement('option');
+                        option.value = userId;
+                        option.textContent = userData.name;
+                        resetSelect.appendChild(option);
+                    }
+                    
+                    const memberElement = this.createTeamMemberElement(userId, userData, schedules[userId] || {});
+                    teamList.appendChild(memberElement);
+                }
+            }
+        } catch (error) {
+            console.error('Error loading team overview:', error);
+        }
+    }
+
+    createTeamMemberElement(userId, userData, userSchedules) {
+        const memberDiv = document.createElement('div');
+        memberDiv.className = 'team-member';
+        
+        // Calculate stats for current month
+        const currentYear = this.currentMonth.getFullYear();
+        const currentMonthNum = this.currentMonth.getMonth();
+        
+        let homeOfficeDays = 0;
+        let officeDays = 0;
+        let totalWorkDays = 0;
+        
+        const firstDay = new Date(currentYear, currentMonthNum, 1);
+        const lastDay = new Date(currentYear, currentMonthNum + 1, 0);
+        
+        for (let day = 1; day <= lastDay.getDate(); day++) {
+            const date = new Date(currentYear, currentMonthNum, day);
+            const dateStr = this.formatDate(date);
+            
+            if (!this.isWeekend(date) && !this.isHoliday(date)) {
+                totalWorkDays++;
+                const status = userSchedules[dateStr];
+                if (status === 'homeoffice') {
+                    homeOfficeDays++;
+                } else if (status === 'office') {
+                    officeDays++;
+                }
+            }
+        }
+        
+        const percentage = totalWorkDays > 0 ? Math.round((homeOfficeDays / totalWorkDays) * 100) : 0;
+        const quotaRule = userData.quotaRule || 40;
+        
+        memberDiv.innerHTML = `
+            <div class="team-member-header">
+                <h4 class="team-member-name">${userData.name}</h4>
+                <span class="status ${this.getQuotaStatusClass(percentage, quotaRule)}">${percentage}%</span>
+            </div>
+            <div class="team-member-stats">
+                <div class="team-member-stat">
+                    <span class="team-member-stat-label">HO-Tage</span>
+                    <span class="team-member-stat-value">${homeOfficeDays}</span>
+                </div>
+                <div class="team-member-stat">
+                    <span class="team-member-stat-label">Büro-Tage</span>
+                    <span class="team-member-stat-value">${officeDays}</span>
+                </div>
+                <div class="team-member-stat">
+                    <span class="team-member-stat-label">Regel</span>
+                    <span class="team-member-stat-value">${quotaRule}%</span>
+                </div>
+            </div>
+            <div class="mini-calendar" id="miniCalendar_${userId}"></div>
+        `;
+        
+        // Render mini calendar
+        setTimeout(() => {
+            this.renderMiniCalendar(userId, userSchedules);
+        }, 0);
+        
+        return memberDiv;
+    }
+
+    renderMiniCalendar(userId, userSchedules) {
+        const container = document.getElementById(`miniCalendar_${userId}`);
+        if (!container) return;
+        
+        const firstDay = new Date(this.currentMonth.getFullYear(), this.currentMonth.getMonth(), 1);
+        const startDate = new Date(firstDay);
+        startDate.setDate(startDate.getDate() - (firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1));
+        
+        // Add headers
+        const headers = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+        headers.forEach(header => {
+            const headerDiv = document.createElement('div');
+            headerDiv.className = 'mini-calendar-header';
+            headerDiv.textContent = header;
+            container.appendChild(headerDiv);
+        });
+        
+        // Add days
+        for (let i = 0; i < 42; i++) {
+            const currentDate = new Date(startDate);
+            currentDate.setDate(startDate.getDate() + i);
+            
+            const dayDiv = document.createElement('div');
+            dayDiv.className = 'mini-calendar-day';
+            dayDiv.textContent = currentDate.getDate();
+            
+            const dateStr = this.formatDate(currentDate);
+            
+            if (currentDate.getMonth() !== this.currentMonth.getMonth()) {
+                dayDiv.style.opacity = '0.3';
+            }
+            
+            if (this.isWeekend(currentDate)) {
+                dayDiv.classList.add('weekend');
+            } else if (this.isHoliday(currentDate)) {
+                dayDiv.classList.add('holiday');
+            } else {
+                const status = userSchedules[dateStr];
+                if (status === 'homeoffice') {
+                    dayDiv.classList.add('homeoffice');
+                } else if (status === 'office') {
+                    dayDiv.classList.add('office');
+                }
+            }
+            
+            container.appendChild(dayDiv);
+        }
+    }
+
+    getQuotaStatusClass(percentage, quotaRule) {
+        if (percentage <= quotaRule) {
+            return 'status--success';
+        } else if (percentage <= quotaRule + 10) {
+            return 'status--warning';
+        } else {
+            return 'status--error';
+        }
+    }
+
+    formatDate(date) {
+        return date.toISOString().split('T')[0];
+    }
+
+    isToday(date) {
         const today = new Date();
-        if (cellDate.toDateString() === today.toDateString()) {
-          day.classList.add('today');
-        }
+        return date.toDateString() === today.toDateString();
+    }
+
+    isWeekend(date) {
+        const day = date.getDay();
+        return day === 0 || day === 6;
+    }
+
+    isHoliday(date) {
+        const dateStr = this.formatDate(date);
+        return this.holidays.includes(dateStr);
+    }
+
+    generateHolidays() {
+        const holidays = [];
         
-        // Check if has status
-        if (userPlans[dateKey]) {
-          day.classList.add('has-status', `status-${userPlans[dateKey]}`);
-          const symbols = {
-            homeoffice: '🏠',
-            buero: '🏢',
-            urlaub: '🏖️',
-            az: '⏰'
-          };
-          day.textContent = `${cellDate.getDate()} ${symbols[userPlans[dateKey]] || ''}`;
-        }
+        // Holidays 2025-2030
+        const years = [2025, 2026, 2027, 2028, 2029, 2030];
         
-        // Add click handler
-        day.addEventListener('click', () => handleDayClick(dateKey));
-      }
+        years.forEach(year => {
+            // Fixed holidays
+            holidays.push(`${year}-01-01`); // Neujahr
+            holidays.push(`${year}-05-01`); // Tag der Arbeit
+            holidays.push(`${year}-10-03`); // Tag der Deutschen Einheit
+            holidays.push(`${year}-12-25`); // 1. Weihnachtstag
+            holidays.push(`${year}-12-26`); // 2. Weihnachtstag
+            
+            // Easter dependent holidays
+            const easter = this.calculateEaster(year);
+            holidays.push(this.formatDate(new Date(easter.getTime() - 2 * 24 * 60 * 60 * 1000))); // Karfreitag
+            holidays.push(this.formatDate(new Date(easter.getTime() + 1 * 24 * 60 * 60 * 1000))); // Ostermontag
+            holidays.push(this.formatDate(new Date(easter.getTime() + 39 * 24 * 60 * 60 * 1000))); // Christi Himmelfahrt
+            holidays.push(this.formatDate(new Date(easter.getTime() + 50 * 24 * 60 * 60 * 1000))); // Pfingstmontag
+        });
+        
+        return holidays;
     }
-    
-    calendar.appendChild(day);
-  }
-}
 
-// Handle day click
-async function handleDayClick(dateKey) {
-  const statuses = ['', 'homeoffice', 'buero', 'urlaub', 'az'];
-  const statusNames = ['Leer', 'Home-Office', 'Büro', 'Urlaub', 'AZ'];
-  
-  try {
-    const [year, month] = dateKey.split('-');
-    const monthKey = `${year}-${month}`;
-    
-    // Get current status
-    const snapshot = await database.ref(`plans/${currentUser.id}/${monthKey}/${dateKey}`).once('value');
-    const currentStatus = snapshot.val() || '';
-    
-    // Find next status
-    const currentIndex = statuses.indexOf(currentStatus);
-    const nextIndex = (currentIndex + 1) % statuses.length;
-    const nextStatus = statuses[nextIndex];
-    
-    // Update in Firebase
-    if (nextStatus === '') {
-      await database.ref(`plans/${currentUser.id}/${monthKey}/${dateKey}`).remove();
-    } else {
-      await database.ref(`plans/${currentUser.id}/${monthKey}/${dateKey}`).set(nextStatus);
+    calculateEaster(year) {
+        const a = year % 19;
+        const b = Math.floor(year / 100);
+        const c = year % 100;
+        const d = Math.floor(b / 4);
+        const e = b % 4;
+        const f = Math.floor((b + 8) / 25);
+        const g = Math.floor((b - f + 1) / 3);
+        const h = (19 * a + b - d - g + 15) % 30;
+        const i = Math.floor(c / 4);
+        const k = c % 4;
+        const l = (32 + 2 * e + 2 * i - h - k) % 7;
+        const m = Math.floor((a + 11 * h + 22 * l) / 451);
+        const month = Math.floor((h + l - 7 * m + 114) / 31);
+        const day = ((h + l - 7 * m + 114) % 31) + 1;
+        return new Date(year, month - 1, day);
     }
-    
-    // Refresh calendar
-    renderCalendar();
-    updateQuotaDisplay();
-    
-  } catch (error) {
-    console.error('Error updating status:', error);
-    showError('Fehler beim Speichern');
-  }
 }
 
-// Change month
-function changeMonth(direction) {
-  currentDate.setMonth(currentDate.getMonth() + direction);
-  renderCalendar();
-  updateQuotaDisplay();
-}
-
-// Update quota display
-async function updateQuotaDisplay() {
-  try {
-    const year = currentDate.getFullYear();
-    const month = String(currentDate.getMonth() + 1).padStart(2, '0');
-    const monthKey = `${year}-${month}`;
-    
-    const snapshot = await database.ref(`plans/${currentUser.id}/${monthKey}`).once('value');
-    const plans = snapshot.val() || {};
-    
-    // Count working days and home office days
-    const workingDays = Object.values(plans).filter(status => 
-      status === 'homeoffice' || status === 'buero'
-    ).length;
-    
-    const homeOfficeDays = Object.values(plans).filter(status => 
-      status === 'homeoffice'
-    ).length;
-    
-    const currentQuota = workingDays > 0 ? Math.round((homeOfficeDays / workingDays) * 100) : 0;
-    const quotaElement = document.getElementById('quotaValue');
-    
-    quotaElement.textContent = `${currentQuota}%`;
-    
-    // Color coding based on quota limit
-    const maxQuota = parseInt(document.getElementById('quotaSelect').value);
-    if (currentQuota > maxQuota) {
-      quotaElement.style.color = '#DC3545'; // Red
-    } else if (currentQuota > maxQuota * 0.8) {
-      quotaElement.style.color = '#FFC107'; // Yellow
-    } else {
-      quotaElement.style.color = '#28A745'; // Green
-    }
-    
-  } catch (error) {
-    console.error('Error updating quota:', error);
-  }
-}
-
-// Handle quota change
-async function handleQuotaChange(e) {
-  const newQuota = parseInt(e.target.value);
-  currentUser.quota = newQuota;
-  
-  // Save to Firebase if not teamleader
-  if (currentUser.role !== 'teamleader') {
-    try {
-      await database.ref(`users/${currentUser.id}/profile/quota`).set(newQuota);
-    } catch (error) {
-      console.error('Error saving quota:', error);
-    }
-  }
-  
-  updateQuotaDisplay();
-}
-
-// Render team overview
-async function renderTeamOverview() {
-  const teamGrid = document.getElementById('teamGrid');
-  teamGrid.innerHTML = '';
-  
-  try {
-    const usersSnapshot = await database.ref('users').once('value');
-    const users = usersSnapshot.val() || {};
-    
-    for (const userId of Object.keys(users)) {
-      const user = users[userId];
-      if (!user.profile || user.profile.role !== 'employee') continue;
-      
-      const memberDiv = document.createElement('div');
-      memberDiv.className = 'team-member';
-      
-      // Get user's current month plans
-      const year = currentDate.getFullYear();
-      const month = String(currentDate.getMonth() + 1).padStart(2, '0');
-      const monthKey = `${year}-${month}`;
-      
-      const plansSnapshot = await database.ref(`plans/${userId}/${monthKey}`).once('value');
-      const plans = plansSnapshot.val() || {};
-      
-      // Calculate quota
-      const workingDays = Object.values(plans).filter(status => 
-        status === 'homeoffice' || status === 'buero'
-      ).length;
-      
-      const homeOfficeDays = Object.values(plans).filter(status => 
-        status === 'homeoffice'
-      ).length;
-      
-      const quota = workingDays > 0 ? Math.round((homeOfficeDays / workingDays) * 100) : 0;
-      
-      memberDiv.innerHTML = `
-        <div class="team-member-header">
-          <h4 class="team-member-name">${user.profile.name}</h4>
-          ${currentUser.role === 'teamleader' ? `<span class="team-member-quota">${quota}%</span>` : ''}
-        </div>
-        <div class="team-member-calendar" id="team-calendar-${userId}"></div>
-      `;
-      
-      teamGrid.appendChild(memberDiv);
-      
-      // Render mini calendar for this user
-      renderMiniCalendar(userId, plans);
-    }
-    
-  } catch (error) {
-    console.error('Error loading team overview:', error);
-  }
-}
-
-// Render mini calendar for team member
-function renderMiniCalendar(userId, plans) {
-  const container = document.getElementById(`team-calendar-${userId}`);
-  if (!container) return;
-  
-  const year = currentDate.getFullYear();
-  const month = currentDate.getMonth();
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  
-  container.innerHTML = '';
-  container.style.display = 'grid';
-  container.style.gridTemplateColumns = 'repeat(7, 1fr)';
-  container.style.gap = '2px';
-  container.style.fontSize = '12px';
-  
-  // Add day headers
-  const dayHeaders = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
-  dayHeaders.forEach(day => {
-    const header = document.createElement('div');
-    header.textContent = day;
-    header.style.textAlign = 'center';
-    header.style.fontWeight = 'bold';
-    header.style.padding = '2px';
-    container.appendChild(header);
-  });
-  
-  // Get first day of month
-  const firstDay = new Date(year, month, 1);
-  const startPadding = (firstDay.getDay() + 6) % 7;
-  
-  // Add empty cells for padding
-  for (let i = 0; i < startPadding; i++) {
-    const emptyCell = document.createElement('div');
-    container.appendChild(emptyCell);
-  }
-  
-  // Add days
-  for (let day = 1; day <= daysInMonth; day++) {
-    const dayElement = document.createElement('div');
-    dayElement.textContent = day;
-    dayElement.style.textAlign = 'center';
-    dayElement.style.padding = '2px';
-    dayElement.style.border = '1px solid #eee';
-    dayElement.style.borderRadius = '2px';
-    
-    const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    const status = plans[dateKey];
-    
-    if (status) {
-      const colors = {
-        homeoffice: '#FF8C00',
-        buero: '#4169E1', 
-        urlaub: '#32CD32',
-        az: '#808080'
-      };
-      dayElement.style.backgroundColor = colors[status] || '#ccc';
-      dayElement.style.color = 'white';
-    }
-    
-    container.appendChild(dayElement);
-  }
-}
-
-// Show password modal
-function showPasswordModal() {
-  document.getElementById('passwordModal').classList.remove('hidden');
-}
-
-// Hide password modal
-function hidePasswordModal() {
-  document.getElementById('passwordModal').classList.add('hidden');
-  // Clear form
-  document.getElementById('currentPassword').value = '';
-  document.getElementById('newPassword').value = '';
-  document.getElementById('confirmPassword').value = '';
-}
-
-// Save new password
-async function saveNewPassword() {
-  const currentPw = document.getElementById('currentPassword').value;
-  const newPw = document.getElementById('newPassword').value;
-  const confirmPw = document.getElementById('confirmPassword').value;
-  
-  if (!currentPw || !newPw || !confirmPw) {
-    showError('Bitte füllen Sie alle Felder aus');
-    return;
-  }
-  
-  if (newPw !== confirmPw) {
-    showError('Neue Passwörter stimmen nicht überein');
-    return;
-  }
-  
-  try {
-    // Verify current password
-    const currentHash = await hashPassword(currentPw);
-    const snapshot = await database.ref(`users/${currentUser.id}/profile/passwordHash`).once('value');
-    const storedHash = snapshot.val();
-    
-    if (currentHash !== storedHash) {
-      showError('Aktuelles Passwort falsch');
-      return;
-    }
-    
-    // Save new password
-    const newHash = await hashPassword(newPw);
-    await database.ref(`users/${currentUser.id}/profile/passwordHash`).set(newHash);
-    
-    hidePasswordModal();
-    showError('Passwort erfolgreich geändert', 'success');
-    
-  } catch (error) {
-    console.error('Error changing password:', error);
-    showError('Fehler beim Ändern des Passworts');
-  }
-}
-
-// Delete account
-async function deleteAccount() {
-  if (!confirm('Möchten Sie Ihr Konto wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.')) {
-    return;
-  }
-  
-  try {
-    await database.ref(`users/${currentUser.id}`).remove();
-    await database.ref(`plans/${currentUser.id}`).remove();
-    
-    logout();
-    showError('Konto wurde gelöscht', 'success');
-    
-  } catch (error) {
-    console.error('Error deleting account:', error);
-    showError('Fehler beim Löschen des Kontos');
-  }
-}
-
-// Logout
-function logout() {
-  // Clean up listeners
-  listeners.forEach(listener => {
-    if (listener.off) listener.off();
-  });
-  listeners = [];
-  
-  currentUser = null;
-  currentDate = new Date();
-  
-  // Reset forms
-  document.getElementById('userType').value = '';
-  hideAllLoginForms();
-  
-  // Show login screen
-  document.getElementById('loginScreen').classList.remove('hidden');
-  document.getElementById('dashboardScreen').classList.add('hidden');
-  document.getElementById('teamOverviewScreen').classList.add('hidden');
-  
-  // Reload users
-  loadUsers();
-}
-
-// Show error message
-function showError(message, type = 'error') {
-  const errorElement = document.getElementById('errorMessage');
-  errorElement.textContent = message;
-  errorElement.className = type === 'success' ? 'success-message' : 'error-message';
-  errorElement.classList.remove('hidden');
-  
-  // Hide after 5 seconds
-  setTimeout(() => {
-    errorElement.classList.add('hidden');
-  }, 5000);
-}
+// Initialize the application when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOM loaded, initializing HomeOffice-Planer');
+    window.homeOfficePlaner = new HomeOfficePlaner();
+});
