@@ -5,204 +5,246 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HomeOffice-Planer DRV Saarland</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#217A8D">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192x192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512x512.png">
 </head>
 <body>
-    <!-- Login Screen -->
-    <div class="login-screen" id="loginScreen">
-        <div class="login-container">
-            <div class="login-card">
-                <div class="logo-placeholder">
-                    <h1>HomeOffice-Planer</h1>
-                    <p>DRV Saarland</p>
-                </div>
-                
-                <!-- Role Selection -->
-                <div class="role-selection" id="roleSelection">
-                    <h3>Anmeldung als:</h3>
-                    <div class="role-buttons">
-                        <button type="button" class="btn btn--outline btn--full-width" id="colleagueRoleBtn">
-                            👤 Kollege
-                        </button>
-                        <button type="button" class="btn btn--primary btn--full-width" id="teamleaderRoleBtn">
-                            👨‍💼 Teamleiter
-                        </button>
-                        <button type="button" class="btn btn--secondary btn--full-width" id="newColleagueRoleBtn">
-                            ➕ Neuer Kollege
-                        </button>
-                    </div>
-                </div>
-                
-                <!-- Colleague Login Form -->
-                <form class="login-form hidden" id="colleagueLoginForm">
-                    <button type="button" class="back-btn" id="backFromColleagueLogin">← Zurück</button>
-                    <h3>Kollege Anmeldung</h3>
+    <div class="container">
+        <!-- Login Screen -->
+        <section class="login-screen" id="loginScreen">
+            <div class="card login-card">
+                <div class="card__body">
+                    <h1>HomeOffice-Planer DRV Saarland</h1>
                     <div class="form-group">
-                        <label for="colleagueUsername" class="form-label">Name</label>
-                        <select id="colleagueUsername" class="form-control" required>
-                            <option value="">Name auswählen</option>
+                        <label for="userType" class="form-label">Anmelden als</label>
+                        <select id="userType" class="form-control">
+                            <option value="">-- Auswählen --</option>
+                            <option value="employee">Kollege</option>
+                            <option value="teamleader">Teamleiter</option>
+                            <option value="newEmployee">Neuer Kollege</option>
                         </select>
                     </div>
-                    <div class="form-group">
-                        <label for="colleaguePassword" class="form-label">Passwort</label>
-                        <input type="password" id="colleaguePassword" class="form-control" required autocomplete="current-password">
+                    
+                    <div class="employee-login hidden" id="employeeLogin">
+                        <div class="form-group">
+                            <label for="employeeName" class="form-label">Name</label>
+                            <select id="employeeName" class="form-control">
+                                <option value="">-- Kollege auswählen --</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="employeePassword" class="form-label">Passwort</label>
+                            <input type="password" id="employeePassword" class="form-control" placeholder="Passwort eingeben">
+                        </div>
+                        <div class="login-actions">
+                            <button class="btn btn--primary" id="employeeLoginBtn">Anmelden</button>
+                        </div>
                     </div>
-                    <div class="login-actions">
-                        <button type="submit" class="btn btn--primary btn--full-width">Anmelden</button>
+                    
+                    <div class="teamleader-login hidden" id="teamleaderLogin">
+                        <div class="form-group">
+                            <label for="teamleaderPassword" class="form-label">Teamleiter-Passwort</label>
+                            <input type="password" id="teamleaderPassword" class="form-control" placeholder="Teamleiter-Passwort eingeben">
+                        </div>
+                        <div class="login-actions">
+                            <button class="btn btn--primary" id="teamleaderLoginBtn">Anmelden</button>
+                        </div>
                     </div>
-                </form>
-                
-                <!-- Team Leader Login Form -->
-                <form class="login-form hidden" id="teamleaderLoginForm">
-                    <button type="button" class="back-btn" id="backFromTeamleaderLogin">← Zurück</button>
-                    <h3>Teamleiter Anmeldung</h3>
-                    <div class="form-group">
-                        <label for="teamleaderPassword" class="form-label">Teamleiter-Passwort</label>
-                        <input type="password" id="teamleaderPassword" class="form-control" required autocomplete="current-password">
+
+                    <div class="new-employee-login hidden" id="newEmployeeLogin">
+                        <div class="form-group">
+                            <label for="newEmployeeName" class="form-label">Name</label>
+                            <input type="text" id="newEmployeeName" class="form-control" placeholder="Ihren Namen eingeben">
+                        </div>
+                        <div class="form-group">
+                            <label for="newEmployeePassword" class="form-label">Passwort</label>
+                            <input type="password" id="newEmployeePassword" class="form-control" placeholder="Passwort eingeben">
+                        </div>
+                        <div class="form-group">
+                            <label for="newEmployeePasswordConfirm" class="form-label">Passwort bestätigen</label>
+                            <input type="password" id="newEmployeePasswordConfirm" class="form-control" placeholder="Passwort wiederholen">
+                        </div>
+                        <div class="login-actions">
+                            <button class="btn btn--primary" id="newEmployeeRegisterBtn">Registrieren</button>
+                        </div>
                     </div>
-                    <div class="login-actions">
-                        <button type="submit" class="btn btn--primary btn--full-width">Anmelden</button>
+
+                    <div class="firebase-status" id="firebaseStatus">
+                        <small id="connectionStatus">Verbindung wird hergestellt...</small>
                     </div>
-                </form>
-                
-                <!-- New Colleague Registration Form -->
-                <form class="login-form hidden" id="newColleagueForm">
-                    <button type="button" class="back-btn" id="backFromNewColleague">← Zurück</button>
-                    <h3>Neuen Kollegen registrieren</h3>
-                    <div class="form-group">
-                        <label for="newColleagueName" class="form-label">Name</label>
-                        <input type="text" id="newColleagueName" class="form-control" placeholder="Namen eingeben" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="newColleaguePassword" class="form-label">Passwort</label>
-                        <input type="password" id="newColleaguePassword" class="form-control" placeholder="Passwort eingeben" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="newColleagueConfirm" class="form-label">Passwort bestätigen</label>
-                        <input type="password" id="newColleagueConfirm" class="form-control" placeholder="Passwort bestätigen" required>
-                    </div>
-                    <div class="login-actions">
-                        <button type="submit" class="btn btn--primary btn--full-width">Registrieren</button>
-                    </div>
-                </form>
-                
-                <div class="demo-info">
-                    <p style="font-size: var(--font-size-sm); color: var(--color-text-secondary); text-align: center; margin-top: var(--space-16);">
-                        Demo: Kollegen (Torsten, Anna, Michael, Sarah, Thomas) - Passwort: "password123"<br>
-                        Teamleiter-Passwort: "teamleiter123"
-                    </p>
                 </div>
             </div>
-        </div>
-        
-        <!-- Footer for Login Screen -->
-        <footer class="login-footer">
-            <div class="footer-content">
-                <span class="footer-text">Design by Torsten Zapp 2025</span>
-            </div>
-        </footer>
-    </div>
+        </section>
 
-    <!-- Main Application -->
-    <div class="app-container hidden" id="appContainer">
-        <div class="container">
+        <!-- Main Application -->
+        <div class="main-app hidden" id="mainApp">
             <!-- Header -->
             <header class="header">
                 <div class="header__content">
                     <h1>HomeOffice-Planer DRV Saarland</h1>
                     <div class="header__nav">
-                        <div class="user-info">
-                            <span id="currentUserName"></span>
-                            <span class="user-role" id="userRole"></span>
-                            <button class="btn btn--outline btn--sm" id="logoutBtn">Abmelden</button>
+                        <div class="user-info" id="userInfo">
+                            <span id="currentUser"></span>
+                            <div class="security-notice hidden" id="securityNotice">
+                                Teamleiter-Modus: Alle Daten einsehbar
+                            </div>
+                            <small id="liveStatus" class="live-status">🔴 Offline</small>
                         </div>
-                        <div class="month-nav">
+                        <div class="nav-controls">
                             <button class="btn btn--outline" id="prevMonth">‹</button>
                             <span class="current-month" id="currentMonth"></span>
                             <button class="btn btn--outline" id="nextMonth">›</button>
+                            <button class="btn btn--secondary" id="logoutBtn">Abmelden</button>
                         </div>
                     </div>
                 </div>
             </header>
 
-            <!-- Colleague Dashboard (Personal View) -->
-            <section class="dashboard" id="personalDashboard">
-                <div class="card">
-                    <div class="card__body">
-                        <div class="dashboard-header">
-                            <h3>Mein Dashboard</h3>
-                            <div class="quota-selector">
-                                <label for="quotaSelect" class="form-label">HomeOffice-Quote</label>
-                                <select id="quotaSelect" class="form-control">
-                                    <option value="40">40%</option>
-                                    <option value="60">60%</option>
+            <!-- Teamleader Navigation -->
+            <nav class="teamleader-nav hidden" id="teamleaderNav">
+                <div class="nav-tabs">
+                    <button class="nav-tab active" data-tab="overview">Übersicht</button>
+                    <button class="nav-tab" data-tab="details">Detailansicht</button>
+                    <button class="nav-tab" data-tab="reports">Berichte</button>
+                </div>
+            </nav>
+
+            <!-- Employee View -->
+            <div class="employee-view" id="employeeView">
+                <!-- Dashboard -->
+                <section class="dashboard">
+                    <div class="card">
+                        <div class="card__body">
+                            <h3>Dashboard für <span id="selectedColleagueName"></span></h3>
+                            <div class="dashboard__controls">
+                                <div class="form-group">
+                                    <label for="homeofficeRule" class="form-label">HomeOffice-Regel</label>
+                                    <select id="homeofficeRule" class="form-control">
+                                        <option value="40">40% (Standard)</option>
+                                        <option value="60">60% (Erweitert)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="dashboard__actions">
+                                <button class="btn btn--secondary btn--sm" id="changePasswordBtn">Passwort ändern</button>
+                                <button class="btn btn--outline btn--sm" id="teamOverviewBtn">Team-Übersicht</button>
+                                <button class="btn btn--danger btn--sm" id="deleteAccountBtn">Konto löschen</button>
+                            </div>
+                            <div class="dashboard__stats">
+                                <div class="stat-card">
+                                    <h4>HomeOffice-Quote</h4>
+                                    <div class="progress-bar">
+                                        <div class="progress-fill" id="progressFill"></div>
+                                    </div>
+                                    <div class="stat-info">
+                                        <span id="homeofficePercent">0%</span>
+                                        <span class="stat-target" id="statTarget">Ziel: ≤ 40%</span>
+                                    </div>
+                                </div>
+                                <div class="stat-card">
+                                    <h4>Monat Übersicht</h4>
+                                    <div class="month-stats" id="monthStats">
+                                        <div>Arbeitstage: <span id="workDays">0</span></div>
+                                        <div>HomeOffice: <span id="homeOfficeDays">0</span></div>
+                                        <div>Büro: <span id="officeDays">0</span></div>
+                                        <div>Urlaub: <span id="vacationDays">0</span></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="warning-message" id="warningMessage" style="display: none;">
+                                <strong>⚠️ Warnung:</strong> <span id="warningText">Die HomeOffice-Regel wird überschritten!</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Teamleader View -->
+            <div class="teamleader-view hidden" id="teamleaderView">
+                <!-- Overview Tab -->
+                <div class="tab-content active" id="overviewTab">
+                    <div class="card">
+                        <div class="card__body">
+                            <div class="overview-header">
+                                <h3>Team-Übersicht</h3>
+                                <div class="teamleader-controls">
+                                    <div class="form-group">
+                                        <label for="teamleaderHomeofficeRule" class="form-label">HomeOffice-Regel</label>
+                                        <select id="teamleaderHomeofficeRule" class="form-control">
+                                            <option value="40">40% (Standard)</option>
+                                            <option value="60">60% (Erweitert)</option>
+                                        </select>
+                                    </div>
+                                    <button class="btn btn--outline btn--sm" id="teamleaderTeamOverviewBtn">Team-Übersicht</button>
+                                </div>
+                                <div class="filter-controls">
+                                    <select id="statusFilter" class="form-control">
+                                        <option value="all">Alle anzeigen</option>
+                                        <option value="violations">Nur Überschreitungen</option>
+                                        <option value="40">Nur 40% Quote</option>
+                                        <option value="60">Nur 60% Quote</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="team-overview-table" id="teamOverviewTable">
+                                <!-- Team overview will be rendered here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Details Tab -->
+                <div class="tab-content hidden" id="detailsTab">
+                    <div class="card">
+                        <div class="card__body">
+                            <h3>Detailansicht</h3>
+                            <div class="form-group">
+                                <label for="detailColleagueSelect" class="form-label">Kollege auswählen</label>
+                                <select id="detailColleagueSelect" class="form-control">
+                                    <option value="">-- Kollege auswählen --</option>
                                 </select>
                             </div>
-                        </div>
-                        <div class="dashboard__stats">
-                            <div class="stat-card">
-                                <h4>HomeOffice-Quote</h4>
-                                <div class="progress-bar">
-                                    <div class="progress-fill" id="progressFill"></div>
-                                </div>
-                                <div class="stat-info">
-                                    <span id="homeofficePercent">0%</span>
-                                    <span class="stat-target" id="statTarget">Ziel: ≤ 40%</span>
-                                </div>
+                            <div id="colleagueDetail" class="colleague-detail hidden">
+                                <!-- Colleague detail will be rendered here -->
                             </div>
-                            <div class="stat-card">
-                                <h4>Monat Übersicht</h4>
-                                <div class="month-stats" id="monthStats">
-                                    <div>Arbeitstage: <span id="workDays">0</span></div>
-                                    <div>HomeOffice: <span id="homeOfficeDays">0</span></div>
-                                    <div>Büro: <span id="officeDays">0</span></div>
-                                    <div>Urlaub: <span id="vacationDays">0</span></div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="warning-message" id="warningMessage" style="display: none;">
-                            <strong>⚠️ Warnung:</strong> Die HomeOffice-Quote wird überschritten!
                         </div>
                     </div>
                 </div>
-            </section>
 
-            <!-- Team Leader Dashboard -->
-            <section class="dashboard hidden" id="teamleaderDashboard">
+                <!-- Reports Tab -->
+                <div class="tab-content hidden" id="reportsTab">
+                    <div class="card">
+                        <div class="card__body">
+                            <h3>Berichte</h3>
+                            <div class="export-controls">
+                                <button class="btn btn--primary" id="exportReportBtn">Monatsbericht exportieren</button>
+                            </div>
+                            <div class="report-preview" id="reportPreview">
+                                <!-- Report preview will be rendered here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Team Overview Modal -->
+            <div class="team-overview-modal hidden" id="teamOverviewModal">
                 <div class="card">
                     <div class="card__body">
-                        <div class="dashboard-header">
-                            <h3>Teamleiter Dashboard</h3>
-                            <div class="teamleader-filter">
-                                <label for="teamleaderFilter" class="form-label">Filter</label>
-                                <select id="teamleaderFilter" class="form-control">
-                                    <option value="all">Alle</option>
-                                    <option value="violations">Überschreitungen</option>
-                                    <option value="quota40">Quote 40%</option>
-                                    <option value="quota60">Quote 60%</option>
-                                </select>
-                            </div>
+                        <div class="modal-header">
+                            <h3>Team-Übersicht - Alle Kalender</h3>
+                            <button class="btn btn--secondary btn--sm" id="backToDashboard">Zurück zu meiner Ansicht</button>
                         </div>
-                        <div class="team-leader-stats" id="teamleaderStats">
-                            <!-- Team statistics will be rendered here -->
+                        <div class="team-calendars" id="teamCalendars">
+                            <!-- Team calendars will be rendered here -->
                         </div>
                     </div>
                 </div>
-            </section>
-
-            <!-- Controls -->
-            <section class="controls">
-                <div class="card">
-                    <div class="card__body">
-                        <div class="control-buttons">
-                            <button class="btn btn--outline" id="teamViewBtn">Team-Übersicht</button>
-                            <button class="btn btn--outline hidden" id="personalViewBtn">Mein Dashboard</button>
-                            <button class="btn btn--outline hidden" id="teamleaderViewBtn">Team-Dashboard</button>
-                            <button class="btn btn--secondary hidden" id="changePasswordBtn">Passwort ändern</button>
-                            <button class="btn btn--outline hidden" id="deleteAccountBtn">Eigenes Konto löschen</button>
-                        </div>
-                    </div>
-                </div>
-            </section>
+            </div>
 
             <!-- Status Legende -->
             <section class="legend">
@@ -253,30 +295,11 @@
                     </div>
                 </div>
             </section>
-
-            <!-- Team Ansicht -->
-            <section class="team-view hidden" id="teamView">
-                <div class="card">
-                    <div class="card__body">
-                        <div class="team-header">
-                            <h3>Team-Übersicht</h3>
-                            <button class="btn btn--outline" id="backFromTeamView">Zurück</button>
-                        </div>
-                        <div class="team-grid" id="teamGrid">
-                            <!-- Team members will be rendered here -->
-                        </div>
-                    </div>
-                </div>
-            </section>
         </div>
 
-        <!-- Footer for Main App -->
-        <footer class="app-footer">
-            <div class="container">
-                <div class="footer-content">
-                    <span class="footer-text">Design by Torsten Zapp 2025</span>
-                </div>
-            </div>
+        <!-- Footer -->
+        <footer class="footer">
+            <p>Design by Torsten Zapp 2025</p>
         </footer>
     </div>
 
@@ -286,29 +309,29 @@
         <div class="modal__content">
             <h3>Status für <span id="statusModalDate"></span></h3>
             <div class="status-options">
-                <button class="status-btn" data-status="homeoffice" type="button">
+                <button class="status-btn" data-status="homeoffice">
                     <span class="status-symbol">🏠</span>
                     <span>Home-Office</span>
                 </button>
-                <button class="status-btn" data-status="buero" type="button">
+                <button class="status-btn" data-status="buero">
                     <span class="status-symbol">🏢</span>
                     <span>Büro</span>
                 </button>
-                <button class="status-btn" data-status="urlaub" type="button">
+                <button class="status-btn" data-status="urlaub">
                     <span class="status-symbol">🏖️</span>
                     <span>Urlaub</span>
                 </button>
-                <button class="status-btn" data-status="az" type="button">
+                <button class="status-btn" data-status="az">
                     <span class="status-symbol">⏰</span>
                     <span>AZ</span>
                 </button>
-                <button class="status-btn" data-status="clear" type="button">
+                <button class="status-btn" data-status="clear">
                     <span class="status-symbol">❌</span>
                     <span>Löschen</span>
                 </button>
             </div>
             <div class="modal__actions">
-                <button class="btn btn--secondary" id="cancelStatusChange" type="button">Abbrechen</button>
+                <button class="btn btn--secondary" id="cancelStatusChange">Abbrechen</button>
             </div>
         </div>
     </div>
@@ -318,69 +341,107 @@
         <div class="modal__overlay"></div>
         <div class="modal__content">
             <h3>Passwort ändern</h3>
-            <form id="changePasswordForm">
-                <div class="form-group">
-                    <label for="oldPassword" class="form-label">Altes Passwort</label>
-                    <input type="password" id="oldPassword" class="form-control" required>
-                </div>
-                <div class="form-group">
-                    <label for="newPassword" class="form-label">Neues Passwort</label>
-                    <input type="password" id="newPassword" class="form-control" required>
-                </div>
-                <div class="form-group">
-                    <label for="confirmNewPassword" class="form-label">Neues Passwort bestätigen</label>
-                    <input type="password" id="confirmNewPassword" class="form-control" required>
-                </div>
-                <div class="modal__actions">
-                    <button type="button" class="btn btn--secondary" id="cancelPasswordChange">Abbrechen</button>
-                    <button type="submit" class="btn btn--primary">Passwort ändern</button>
-                </div>
-            </form>
+            <div class="form-group">
+                <label for="oldPassword" class="form-label">Altes Passwort</label>
+                <input type="password" id="oldPassword" class="form-control" placeholder="Altes Passwort eingeben">
+            </div>
+            <div class="form-group">
+                <label for="newPassword" class="form-label">Neues Passwort</label>
+                <input type="password" id="newPassword" class="form-control" placeholder="Neues Passwort eingeben">
+            </div>
+            <div class="form-group">
+                <label for="confirmNewPassword" class="form-label">Neues Passwort bestätigen</label>
+                <input type="password" id="confirmNewPassword" class="form-control" placeholder="Neues Passwort wiederholen">
+            </div>
+            <div class="modal__actions">
+                <button class="btn btn--secondary" id="cancelPasswordChange">Abbrechen</button>
+                <button class="btn btn--primary" id="confirmPasswordChange">Passwort ändern</button>
+            </div>
         </div>
     </div>
 
-    <!-- Modal für Konto löschen Bestätigung -->
+    <!-- Modal für Konto löschen -->
     <div class="modal hidden" id="deleteAccountModal">
         <div class="modal__overlay"></div>
         <div class="modal__content">
-            <h3>Konto löschen</h3>
-            <p>Sind Sie sicher, dass Sie Ihr Konto löschen möchten?</p>
-            <p><strong>Warnung:</strong> Alle Ihre Planungsdaten werden unwiderruflich gelöscht!</p>
+            <h3>⚠️ Konto löschen</h3>
+            <p class="warning-text">
+                <strong>Achtung:</strong> Diese Aktion kann nicht rückgängig gemacht werden!
+            </p>
+            <p>Möchten Sie Ihr Konto wirklich löschen? Alle Ihre Planungsdaten werden unwiderruflich gelöscht.</p>
             <div class="modal__actions">
-                <button type="button" class="btn btn--secondary" id="cancelDeleteAccount">Abbrechen</button>
-                <button type="button" class="btn btn--danger" id="confirmDeleteAccount">Konto löschen</button>
+                <button class="btn btn--secondary" id="cancelDeleteAccount">Abbrechen</button>
+                <button class="btn btn--danger" id="confirmDeleteAccount">Konto löschen</button>
             </div>
         </div>
     </div>
 
-    <!-- Modal für Kollegen Details (Teamleiter) -->
-    <div class="modal hidden" id="colleagueDetailModal">
+    <!-- Modal für Teamleiter Passwort zurücksetzen -->
+    <div class="modal hidden" id="resetPasswordModal">
         <div class="modal__overlay"></div>
         <div class="modal__content">
-            <h3 id="colleagueDetailName">Kollege Details</h3>
-            <div id="colleagueDetailStats"></div>
+            <h3>Passwort zurücksetzen für <span id="resetPasswordColleague"></span></h3>
+            <p>Das Passwort wird auf das Standard-Passwort "NeuesPasswort123" zurückgesetzt.</p>
             <div class="modal__actions">
-                <button type="button" class="btn btn--secondary" id="cancelColleagueDetail">Schließen</button>
-                <button type="button" class="btn btn--warning" id="resetColleaguePassword">Passwort zurücksetzen</button>
-                <button type="button" class="btn btn--danger" id="deleteColleague">Kollegen löschen</button>
+                <button class="btn btn--secondary" id="cancelResetPassword">Abbrechen</button>
+                <button class="btn btn--warning" id="confirmResetPassword">Passwort zurücksetzen</button>
             </div>
         </div>
     </div>
 
-    <!-- Modal für Kollegen löschen Bestätigung (Teamleiter) -->
+    <!-- Modal für Kollegen löschen (Teamleiter) -->
     <div class="modal hidden" id="deleteColleagueModal">
         <div class="modal__overlay"></div>
         <div class="modal__content">
-            <h3>Kollegen löschen</h3>
-            <p>Sind Sie sicher, dass Sie den Kollegen <strong id="deleteColleagueName"></strong> löschen möchten?</p>
-            <p><strong>Warnung:</strong> Alle Planungsdaten des Kollegen werden unwiderruflich gelöscht!</p>
+            <h3>⚠️ Kollegen löschen</h3>
+            <p class="warning-text">
+                <strong>Achtung:</strong> Diese Aktion kann nicht rückgängig gemacht werden!
+            </p>
+            <p>Möchten Sie den Kollegen <strong id="deleteColleagueName"></strong> wirklich löschen? Alle Planungsdaten werden unwiderruflich gelöscht.</p>
             <div class="modal__actions">
-                <button type="button" class="btn btn--secondary" id="cancelDeleteColleague">Abbrechen</button>
-                <button type="button" class="btn btn--danger" id="confirmDeleteColleague">Kollegen löschen</button>
+                <button class="btn btn--secondary" id="cancelDeleteColleague">Abbrechen</button>
+                <button class="btn btn--danger" id="confirmDeleteColleague">Kollegen löschen</button>
             </div>
         </div>
     </div>
 
+    <!-- Firebase SDK -->
+    <script type="module">
+        // Firebase configuration - REPLACE WITH YOUR ACTUAL CONFIG
+        // import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        // import { getDatabase } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+        
+        // const firebaseConfig = {
+        //     apiKey: "YOUR_API_KEY_HERE",
+        //     authDomain: "YOUR_AUTH_DOMAIN_HERE",
+        //     databaseURL: "YOUR_DATABASE_URL_HERE",
+        //     projectId: "YOUR_PROJECT_ID_HERE",
+        //     storageBucket: "YOUR_STORAGE_BUCKET_HERE",
+        //     messagingSenderId: "YOUR_MESSAGING_SENDER_ID_HERE",
+        //     appId: "YOUR_APP_ID_HERE"
+        // };
+        
+        // window.firebaseApp = initializeApp(firebaseConfig);
+        // window.firebaseDB = getDatabase(window.firebaseApp);
+        
+        // For development - use mock Firebase
+        window.firebaseApp = { name: "mock" };
+        window.firebaseDB = { ref: () => ({}) };
+    </script>
     <script src="app.js"></script>
+    <script>
+        // Service Worker registration
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./service-worker.js')
+                    .then((registration) => {
+                        console.log('SW registered: ', registration);
+                    })
+                    .catch((registrationError) => {
+                        console.log('SW registration failed: ', registrationError);
+                    });
+            });
+        }
+    </script>
 </body>
 </html>
