@@ -1,5 +1,7 @@
-// Service Worker for HomeOffice-Planer PWA
-const CACHE_NAME = 'homeoffice-planer-v2';
+// HomeOffice-Planer Service Worker
+// Cacht nur die Shell-Dateien, Firebase-Requests gehen immer ins Netz
+
+const CACHE_NAME = 'homeoffice-planer-v1';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -8,9 +10,9 @@ const urlsToCache = [
   '/manifest.json'
 ];
 
-// Install event
+// Install event - Cache die App Shell
 self.addEventListener('install', event => {
-  console.log('[SW] Installing Service Worker v2');
+  console.log('[SW] Installing Service Worker');
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => {
@@ -18,7 +20,7 @@ self.addEventListener('install', event => {
         return cache.addAll(urlsToCache);
       })
       .then(() => {
-        console.log('[SW] All files cached successfully');
+        console.log('[SW] All files cached');
         self.skipWaiting();
       })
       .catch(error => {
@@ -27,9 +29,9 @@ self.addEventListener('install', event => {
   );
 });
 
-// Activate event
+// Activate event - Cleanup old caches
 self.addEventListener('activate', event => {
-  console.log('[SW] Activating Service Worker v2');
+  console.log('[SW] Activating Service Worker');
   event.waitUntil(
     caches.keys().then(cacheNames => {
       return Promise.all(
@@ -41,13 +43,13 @@ self.addEventListener('activate', event => {
         })
       );
     }).then(() => {
-      console.log('[SW] Claiming all clients');
+      console.log('[SW] Claiming clients');
       return self.clients.claim();
     })
   );
 });
 
-// Fetch event - Network First for Firebase, Cache First for static assets
+// Fetch event - Network First für Firebase, Cache First für static assets
 self.addEventListener('fetch', event => {
   const { request } = event;
   const url = new URL(request.url);
@@ -57,14 +59,13 @@ self.addEventListener('fetch', event => {
     return;
   }
   
-  // Always network first for Firebase Database calls
+  // Immer network first für Firebase Database calls
   if (url.hostname.includes('firebasedatabase.app') || 
       url.hostname.includes('googleapis.com') ||
-      url.hostname.includes('firebase.com') ||
-      url.hostname.includes('gstatic.com')) {
+      url.hostname.includes('firebase.com')) {
     event.respondWith(
       fetch(request).catch(() => {
-        // Return offline response for Firebase calls
+        // Wenn Firebase offline ist, können wir keine Fallback-Daten liefern
         return new Response(
           JSON.stringify({ error: 'Offline - Firebase nicht verfügbar' }),
           {
@@ -78,18 +79,18 @@ self.addEventListener('fetch', event => {
     return;
   }
   
-  // Cache first strategy for static assets
+  // Cache first strategy für statische Assets
   event.respondWith(
     caches.match(request)
       .then(response => {
-        // Return cached version or fetch from network
+        // Gib gecachte Version zurück oder fetch aus dem Netzwerk
         return response || fetch(request).then(fetchResponse => {
-          // Don't cache invalid responses
+          // Cache nur gültige Responses
           if (!fetchResponse || fetchResponse.status !== 200 || fetchResponse.type !== 'basic') {
             return fetchResponse;
           }
           
-          // Clone response for caching
+          // Clone die Response da sie nur einmal konsumiert werden kann
           const responseToCache = fetchResponse.clone();
           
           caches.open(CACHE_NAME)
@@ -101,26 +102,37 @@ self.addEventListener('fetch', event => {
         });
       })
       .catch(() => {
-        // Fallback for offline document requests
+        // Wenn sowohl Cache als auch Netzwerk fehlschlagen
         if (request.destination === 'document') {
-          return caches.match('/index.html');
+          return caches.match('/');
         }
       })
   );
 });
 
-// Background sync for offline data
+// Listen for messages from the app
+self.addEventListener('message', event => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+
+// Background sync für offline data
 self.addEventListener('sync', event => {
   console.log('[SW] Background sync triggered:', event.tag);
   
-  if (event.tag === 'homeoffice-sync') {
-    event.waitUntil(syncOfflineData());
+  if (event.tag === 'homeoffice-data-sync') {
+    event.waitUntil(
+      // Versuche offline Änderungen zu synchronisieren wenn wieder online
+      syncOfflineData()
+    );
   }
 });
 
 async function syncOfflineData() {
   try {
-    console.log('[SW] Attempting to sync offline data...');
+    console.log('[SW] Syncing offline data...');
+    // Post message an die Haupt-App um sync zu triggern
     const clients = await self.clients.matchAll();
     clients.forEach(client => {
       client.postMessage({
@@ -131,10 +143,3 @@ async function syncOfflineData() {
     console.error('[SW] Sync failed:', error);
   }
 }
-
-// Listen for messages from the app
-self.addEventListener('message', event => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
-    self.skipWaiting();
-  }
-});

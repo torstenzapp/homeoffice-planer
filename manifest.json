@@ -1,15 +1,14 @@
 {
   "name": "HomeOffice-Planer DRV Saarland",
   "short_name": "HO-Planer",
-  "description": "HomeOffice-Planung für DRV Saarland Mitarbeiter mit Live-Synchronisierung",
+  "description": "Home-Office-Planung mit Live-Synchronisierung",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#217A8D",
   "orientation": "portrait",
+  "theme_color": "#217A8D",
+  "background_color": "#ffffff",
   "scope": "/",
   "lang": "de",
-  "categories": ["business", "productivity"],
   "icons": [
     {
       "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgdmlld0JveD0iMCAwIDE5MiAxOTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxOTIiIGhlaWdodD0iMTkyIiBmaWxsPSIjMjE3QThEIi8+Cjx0ZXh0IHg9Ijk2IiB5PSIxMDAiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSI0OCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkhPPC90ZXh0Pgo8L3N2Zz4K",
