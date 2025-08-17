@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HomeOffice-Planer DRV Saarland</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#217A8D">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="HomeOffice-Planer">
+    
+    <!-- Firebase CDN -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <h1>🏠 HomeOffice-Planer DRV Saarland</h1>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Login Screen -->
+        <div class="screen" id="loginScreen">
+            <div class="card">
+                <h2>Anmeldung</h2>
+                
+                <!-- Role Selection -->
+                <div id="roleSelection" class="role-selection">
+                    <div class="button-group">
+                        <button class="btn btn-primary" id="employeeBtn">👨‍💼 Kollege</button>
+                        <button class="btn btn-primary" id="teamleaderBtn">👨‍💼 Teamleiter</button>
+                        <button class="btn btn-secondary" id="newEmployeeBtn">➕ Neuer Kollege</button>
+                    </div>
+                </div>
+
+                <!-- Employee Login -->
+                <div id="employeeLogin" class="login-form hidden">
+                    <div class="form-group">
+                        <label>Name auswählen</label>
+                        <select id="employeeSelect" class="form-input">
+                            <option value="">-- Kollege auswählen --</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Passwort</label>
+                        <input type="password" id="employeePassword" class="form-input" placeholder="Passwort eingeben">
+                    </div>
+                    <div class="button-group">
+                        <button class="btn btn-primary btn-full" id="employeeLoginBtn">Anmelden</button>
+                        <button class="btn btn-outline btn-full" id="employeeBackBtn">Zurück</button>
+                    </div>
+                </div>
+
+                <!-- Teamleader Login -->
+                <div id="teamleaderLogin" class="login-form hidden">
+                    <div class="form-group">
+                        <label>Teamleiter-Passwort</label>
+                        <input type="password" id="teamleaderPassword" class="form-input" placeholder="Passwort eingeben">
+                    </div>
+                    <div class="button-group">
+                        <button class="btn btn-primary btn-full" id="teamleaderLoginBtn">Anmelden</button>
+                        <button class="btn btn-outline btn-full" id="teamleaderBackBtn">Zurück</button>
+                    </div>
+                </div>
+
+                <!-- New Employee -->
+                <div id="newEmployeeLogin" class="login-form hidden">
+                    <div class="form-group">
+                        <label>Name</label>
+                        <input type="text" id="newEmployeeName" class="form-input" placeholder="Vollständigen Namen eingeben">
+                    </div>
+                    <div class="form-group">
+                        <label>Passwort</label>
+                        <input type="password" id="newEmployeePassword" class="form-input" placeholder="Passwort eingeben">
+                    </div>
+                    <div class="form-group">
+                        <label>Passwort bestätigen</label>
+                        <input type="password" id="newEmployeeConfirm" class="form-input" placeholder="Passwort wiederholen">
+                    </div>
+                    <div class="button-group">
+                        <button class="btn btn-primary btn-full" id="newEmployeeRegisterBtn">Registrieren</button>
+                        <button class="btn btn-outline btn-full" id="newEmployeeBackBtn">Zurück</button>
+                    </div>
+                </div>
+
+                <div class="error-message hidden" id="errorMessage"></div>
+            </div>
+        </div>
+
+        <!-- Dashboard Screen -->
+        <div class="screen hidden" id="dashboardScreen">
+            <div class="dashboard">
+                <div class="dashboard-header">
+                    <h2 id="welcomeMessage">Willkommen</h2>
+                    <button class="btn btn-outline" id="logoutBtn">Logout</button>
+                </div>
+
+                <div class="dashboard-controls card">
+                    <div class="control-item">
+                        <label>HomeOffice-Regel:</label>
+                        <select id="quotaSelect" class="form-input form-input-small">
+                            <option value="40">40% (Standard)</option>
+                            <option value="60">60% (Erweitert)</option>
+                        </select>
+                    </div>
+                    <div class="control-item">
+                        <span>Aktuelle Quote: <strong id="quotaValue" class="quota-value">0%</strong></span>
+                    </div>
+                </div>
+
+                <div class="calendar-container card">
+                    <div class="calendar-header">
+                        <button class="btn btn-small" id="prevMonthBtn">‹</button>
+                        <h3 id="currentMonthTitle">Januar 2025</h3>
+                        <button class="btn btn-small" id="nextMonthBtn">›</button>
+                    </div>
+                    <div class="calendar" id="calendar"></div>
+                    <div class="calendar-legend">
+                        <div class="legend-item"><span class="legend-color homeoffice"></span>🏠 Home-Office</div>
+                        <div class="legend-item"><span class="legend-color buero"></span>🏢 Büro</div>
+                        <div class="legend-item"><span class="legend-color urlaub"></span>🏖️ Urlaub</div>
+                        <div class="legend-item"><span class="legend-color az"></span>⏰ AZ</div>
+                    </div>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="btn btn-outline" id="teamOverviewBtn">Team-Übersicht</button>
+                    <button class="btn btn-outline" id="changePasswordBtn">Passwort ändern</button>
+                    <button class="btn btn-danger" id="deleteAccountBtn">Konto löschen</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Team Overview Screen -->
+        <div class="screen hidden" id="teamOverviewScreen">
+            <div class="team-overview">
+                <div class="team-header">
+                    <button class="btn btn-outline" id="backToDashboardBtn">← Zurück</button>
+                    <h2>Team-Übersicht</h2>
+                </div>
+                <div class="team-grid" id="teamGrid"></div>
+            </div>
+        </div>
+
+        <!-- Password Modal -->
+        <div class="modal hidden" id="passwordModal">
+            <div class="modal-backdrop"></div>
+            <div class="modal-content">
+                <h3>Passwort ändern</h3>
+                <div class="form-group">
+                    <label>Aktuelles Passwort</label>
+                    <input type="password" id="currentPasswordInput" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label>Neues Passwort</label>
+                    <input type="password" id="newPasswordInput" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label>Neues Passwort bestätigen</label>
+                    <input type="password" id="confirmPasswordInput" class="form-input">
+                </div>
+                <div class="button-group">
+                    <button class="btn btn-primary" id="savePasswordBtn">Speichern</button>
+                    <button class="btn btn-outline" id="cancelPasswordBtn">Abbrechen</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>Design by Torsten Zapp 2025</p>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>
