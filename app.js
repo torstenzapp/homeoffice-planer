@@ -1,11 +1,32 @@
-// HomeOffice Planner JavaScript - Complete Firebase Realtime Database Integration
-// KORRIGIERTE UND VERBESSERTE VERSION
+// homeoffice-planner.js
+
+// Import Firebase-Bibliotheken
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getDatabase, ref, set, update, remove, onValue, off } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+// Deine Firebase-Konfiguration wurde hier eingefügt
+const firebaseConfig = {
+    apiKey: "AIzaSyDtPxYtqFSUcWrT7zJ-mjAQyPvCsMYZ6zg",
+    authDomain: "ho-planerv2.firebaseapp.com",
+    databaseURL: "https://ho-planerv2-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "ho-planerv2",
+    storageBucket: "ho-planerv2.firebasestorage.app",
+    messagingSenderId: "203584570304",
+    appId: "1:203584570304:web:4c5337ce60ed52ed67fe25",
+    measurementId: "G-1QB1ZM8CBL" // Measurement ID ist optional
+};
+
 class HomeOfficePlanner {
     constructor() {
         // Firebase integration
         this.isFirebaseEnabled = false;
+        this.app = null;
+        this.auth = null;
         this.database = null;
+        this.currentUser = null;
         this.currentUserUID = null;
+        this.userRole = null;
         this.dataListeners = new Map(); // Track active listeners
 
         // Extended holidays data through 2030
@@ -25,91 +46,262 @@ class HomeOfficePlanner {
             "az": { "name": "AZ", "color": "#808080", "symbol": "⏰" }
         };
 
-        // KORREKTUR: Hartkodierte Passwörter entfernt. Dies sollte serverseitig gehandhabt werden.
-        // Das Frontend sollte niemals Passwörter kennen.
-
         // Application state
-        this.colleagues = ["Torsten", "Anna", "Michael", "Sarah", "Thomas"];
-        this.currentUser = null;
-        this.userRole = null;
-        this.currentDate = new Date();
-        this.planningData = {};
-        this.colleaguePasswords = {}; // Sollte serverseitig als sicherer Hash gespeichert werden
-        this.homeofficeRules = {};
+        this.colleagues = []; // Wird von Firebase geladen
+        this.planningData = {}; // Wird von Firebase geladen
+        this.homeofficeRules = {}; // Wird von Firebase geladen
         this.selectedDateForStatus = null;
         this.activeTab = 'overview';
         this.selectedColleagueForAction = null;
         this.isTeamOverviewMode = false;
-
-        // Initialize default data (nur für Offline-Modus relevant)
-        this.initializeDefaultDataForOfflineMode();
-    }
-    
-    // KORREKTUR: Diese Methode sollte nur als Fallback für den Offline-Betrieb dienen.
-    // In einer echten Anwendung werden die Daten von Firebase geladen.
-    initializeDefaultDataForOfflineMode() {
-        this.colleagues.forEach(colleague => {
-            // Im echten Betrieb würden Passwörter NIEMALS hier gespeichert.
-            // Dies dient nur der Demo-Funktionalität im Offline-Modus.
-            this.homeofficeRules[colleague] = 40;
-        });
+        
     }
 
-    // ===== FIREBASE INTEGRATION =====
+    // ===== FIREBASE INTEGRATION & AUTHENTICATION =====
 
     async initializeFirebase() {
         try {
-            const timeout = new Promise((_, reject) =>
-                setTimeout(() => reject(new Error('Firebase initialization timeout')), 5000)
-            );
+            this.app = initializeApp(firebaseConfig);
+            this.auth = getAuth(this.app);
+            this.database = getDatabase(this.app);
+            this.isFirebaseEnabled = true;
 
-            const firebaseCheck = new Promise((resolve) => {
-                // Prüft, ob das Firebase DB Objekt im globalen Scope verfügbar ist
-                if (window.firebaseDB && typeof window.firebaseDB === 'object') {
-                    this.database = window.firebaseDB;
-                    this.isFirebaseEnabled = true;
-                    resolve(true);
+            onAuthStateChanged(this.auth, (user) => {
+                if (user) {
+                    this.currentUserUID = user.uid;
+                    this.updateConnectionStatus('🟢 Firebase verbunden');
+                    this.loadUserProfile(user.uid);
+                    this.showMainApp();
                 } else {
-                    resolve(false);
+                    this.currentUser = null;
+                    this.currentUserUID = null;
+                    this.userRole = null;
+                    this.updateConnectionStatus('🔴 Offline Modus');
+                    this.showLoginScreen();
                 }
             });
+            console.log('Firebase initialized. Awaiting authentication state...');
+            return true;
 
-            const result = await Promise.race([firebaseCheck, timeout]);
-
-            if (result && this.isFirebaseEnabled) {
-                await this.setupConnectionMonitoring();
-                this.updateConnectionStatus('🟢 Firebase verbunden');
-                console.log('Firebase successfully initialized');
-                return true;
-            } else {
-                throw new Error('Firebase not available');
-            }
         } catch (error) {
-            console.log('Firebase not available - using local mode:', error.message);
+            console.error('Firebase initialization failed:', error);
             this.isFirebaseEnabled = false;
-            this.updateConnectionStatus('🔴 Offline Modus');
+            this.updateConnectionStatus('🔴 Initialisierungsfehler');
             return false;
         }
     }
 
-    async setupConnectionMonitoring() {
-        if (!this.isFirebaseEnabled) return;
+    async loadUserProfile(uid) {
+        const profileRef = ref(this.database, `users/${uid}/profile`);
+        onValue(profileRef, (snapshot) => {
+            const profile = snapshot.val();
+            if (profile) {
+                this.currentUser = profile.name;
+                this.userRole = profile.role;
+                this.showViewForRole();
+                this.updateDashboard(this.currentUser);
+                this.setupDataListeners(this.currentUserUID);
+            }
+        });
+    }
 
-        try {
-            const { ref, onValue } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js');
-
-            const connectedRef = ref(this.database, '.info/connected');
-            onValue(connectedRef, (snapshot) => {
-                if (snapshot.val() === true) {
-                    this.updateLiveStatus('🟢 Live');
-                } else {
-                    this.updateLiveStatus('🔴 Offline');
-                }
-            });
-        } catch (error) {
-            console.error('Connection monitoring setup failed:', error);
-            this.updateLiveStatus('🔴 Offline');
+    async registerNewEmployee(email, password, name) {
+        if (!this.isFirebaseEnabled) {
+            alert("Offline Modus. Registrierung nicht möglich.");
+            return;
         }
+        try {
+            const userCredential = await createUserWithEmailAndPassword(this.auth, email, password);
+            const user = userCredential.user;
+            await set(ref(this.database, `users/${user.uid}/profile`), {
+                name: name,
+                role: 'employee',
+                quota: 40,
+                email: email
+            });
+            alert(`Mitarbeiter ${name} erfolgreich registriert!`);
+        } catch (error) {
+            console.error('Fehler bei der Registrierung:', error.message);
+            alert(`Fehler bei der Registrierung: ${error.message}`);
+        }
+    }
+    
+    async loginUser(email, password, role) {
+        if (!this.isFirebaseEnabled) {
+            alert("Offline Modus. Login nicht möglich.");
+            return;
+        }
+        try {
+            const userCredential = await signInWithEmailAndPassword(this.auth, email, password);
+            // Der Rest der Logik wird von onAuthStateChanged gehandhabt.
+        } catch (error) {
+            console.error('Login-Fehler:', error.message);
+            alert(`Login-Fehler: ${error.message}`);
+        }
+    }
+
+    async logout() {
+        if (this.isFirebaseEnabled) {
+            await signOut(this.auth);
+            this.cleanupListeners();
+            this.showLoginScreen();
+        } else {
+            // Offline-Modus: Simuliere Logout
+            this.currentUser = null;
+            this.userRole = null;
+            this.showLoginScreen();
+        }
+    }
+
+    cleanupListeners() {
+        // Entferne alle aktiven onValue Listener, um Speicherlecks zu vermeiden
+        this.dataListeners.forEach((listener, path) => {
+            off(ref(this.database, path), listener);
+        });
+        this.dataListeners.clear();
+    }
+    
+    // ===== FIREBASE DATA OPERATIONS =====
+
+    async writeData(path, data) {
+        if (!this.isFirebaseEnabled) return;
+        try {
+            await set(ref(this.database, path), data);
+        } catch (error) {
+            console.error('Error writing data:', error);
+        }
+    }
+
+    async updateData(path, updates) {
+        if (!this.isFirebaseEnabled) return;
+        try {
+            await update(ref(this.database, path), updates);
+        } catch (error) {
+            console.error('Error updating data:', error);
+        }
+    }
+
+    async removeData(path) {
+        if (!this.isFirebaseEnabled) return;
+        try {
+            await remove(ref(this.database, path));
+        } catch (error) {
+            console.error('Error removing data:', error);
+        }
+    }
+
+    async savePlanningData(date, status) {
+        if (!this.currentUserUID) {
+            console.error('Kein Benutzer angemeldet. Speichern nicht möglich.');
+            return;
+        }
+        const yearMonth = date.substring(0, 7); // YYYY-MM
+        const path = `plans/${this.currentUserUID}/${yearMonth}/${date}`;
+
+        if (status) {
+            await this.writeData(path, status);
+        } else {
+            await this.removeData(path);
+        }
+    }
+
+    // Die folgenden Methoden sind wichtig für die Echtzeit-Synchronisierung
+    setupDataListeners(uid) {
+        this.cleanupListeners(); // Vorherige Listener entfernen
+        
+        const planningRef = ref(this.database, `plans/${uid}`);
+        const planningListener = onValue(planningRef, (snapshot) => {
+            this.planningData = snapshot.val() || {};
+            this.renderCalendar();
+            this.updateDashboard(this.currentUser);
+        });
+        this.dataListeners.set(`plans/${uid}`, planningListener);
+
+        const colleaguesRef = ref(this.database, 'users');
+        const colleaguesListener = onValue(colleaguesRef, (snapshot) => {
+            const users = snapshot.val();
+            this.colleagues = Object.values(users || {}).map(user => user.profile.name);
+            this.populateEmployeeSelect();
+        });
+        this.dataListeners.set('users', colleaguesListener);
+    }
+    
+    setupTeamDataListeners() {
+        this.cleanupListeners();
+        
+        const teamPlansRef = ref(this.database, 'plans');
+        const teamPlansListener = onValue(teamPlansRef, (snapshot) => {
+            this.planningData = snapshot.val() || {};
+            this.renderTeamOverview();
+        });
+        this.dataListeners.set('plans', teamPlansListener);
+    }
+
+    // Weitere Methoden hier...
+    showLoginScreen() {
+        document.getElementById('loginScreen').classList.remove('hidden');
+        document.getElementById('mainApp').classList.add('hidden');
+        this.showLoginType('employee');
+    }
+
+    showMainApp() {
+        document.getElementById('loginScreen').classList.add('hidden');
+        document.getElementById('mainApp').classList.remove('hidden');
+    }
+    
+    showLoginType(type) {
+        const employeeLogin = document.getElementById('employeeLogin');
+        const teamleaderLogin = document.getElementById('teamleaderLogin');
+        const newEmployeeRegister = document.getElementById('newEmployeeRegister');
+
+        if (employeeLogin) employeeLogin.style.display = 'none';
+        if (teamleaderLogin) teamleaderLogin.style.display = 'none';
+        if (newEmployeeRegister) newEmployeeRegister.style.display = 'none';
+
+        if (type === 'employee' && employeeLogin) {
+            employeeLogin.style.display = 'block';
+        } else if (type === 'teamleader' && teamleaderLogin) {
+            teamleaderLogin.style.display = 'block';
+        } else if (type === 'new-employee' && newEmployeeRegister) {
+            newEmployeeRegister.style.display = 'block';
+        }
+    }
+
+    setupEventListeners() {
+        // Event-Handler für die Buttons und Formulare
+        document.getElementById('userType')?.addEventListener('change', (e) => this.showLoginType(e.target.value));
+        document.getElementById('employeeLoginBtn')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('employeeEmail').value;
+            const password = document.getElementById('employeePassword').value;
+            this.loginUser(email, password, 'employee');
+        });
+        document.getElementById('teamleaderLoginBtn')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            const email = document.getElementById('teamleaderEmail').value;
+            const password = document.getElementById('teamleaderPassword').value;
+            this.loginUser(email, password, 'teamleader');
+        });
+        document.getElementById('newEmployeeRegisterBtn')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            const name = document.getElementById('newEmployeeName').value;
+            const email = document.getElementById('newEmployeeEmail').value;
+            const password = document.getElementById('newEmployeePassword').value;
+            const confirmPassword = document.getElementById('newEmployeePasswordConfirm').value;
+            if (password !== confirmPassword) {
+                alert('Passwörter stimmen nicht überein.');
+                return;
+            }
+            this.registerNewEmployee(email, password, name);
+        });
+        document.getElementById('logoutBtn')?.addEventListener('click', () => this.logout());
+        document.querySelectorAll('#mainApp nav a').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.switchTab(e.target.getAttribute('data-tab'));
+            });
+        });
+        // ... weitere Event-Listener ...
     }
 
     updateConnectionStatus(status) {
@@ -125,284 +317,41 @@ class HomeOfficePlanner {
             statusElement.textContent = status;
         }
     }
+    
+    // Platzhalter für weitere Methoden...
+    renderCalendar() {
+        console.log('Rendering calendar...');
+        // Fügen Sie hier Ihre Logik zum Rendern des Kalenders ein
+    }
 
-    async sha256Hash(message) {
-        if (typeof window !== 'undefined' && window.crypto && window.crypto.subtle) {
-            try {
-                const msgBuffer = new TextEncoder().encode(message);
-                const hashBuffer = await window.crypto.subtle.digest('SHA-256', msgBuffer);
-                const hashArray = Array.from(new Uint8Array(hashBuffer));
-                return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-            } catch (error) {
-                console.error('SHA-256 hashing failed:', error);
-                return null; // Sicherer Fallback: keinen unsicheren Hash zurückgeben
-            }
-        } else {
-            console.warn('Crypto API not available for SHA-256.');
-            return null;
-        }
+    updateDashboard(user) {
+        console.log('Updating dashboard for:', user);
+        // Fügen Sie hier Ihre Logik zur Aktualisierung des Dashboards ein
+    }
+
+    showViewForRole() {
+        console.log('Showing view for role:', this.userRole);
+        // Fügen Sie hier Ihre Logik zum Anzeigen der richtigen Benutzeroberfläche basierend auf der Rolle ein
     }
     
-    // ===== FIREBASE DATA OPERATIONS =====
-
-    async writeData(path, data) {
-        if (!this.isFirebaseEnabled) return;
-        try {
-            const { ref, set } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js');
-            await set(ref(this.database, path), data);
-        } catch (error) {
-            console.error('Error writing data:', error);
-        }
-    }
-
-    async updateData(path, updates) {
-        if (!this.isFirebaseEnabled) return;
-        try {
-            const { ref, update } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js');
-            await update(ref(this.database, path), updates);
-        } catch (error) {
-            console.error('Error updating data:', error);
-        }
-    }
-
-    async removeData(path) {
-        if (!this.isFirebaseEnabled) return;
-        try {
-            const { ref, remove } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js');
-            await remove(ref(this.database, path));
-        } catch (error) {
-            console.error('Error removing data:', error);
-        }
-    }
-
-    // ... (Die restlichen Firebase-spezifischen Methoden wie setupDataListeners, handleUserDataUpdate etc. bleiben größtenteils gleich)
-    // ... Wichtig ist, dass diese Funktionen nun die sicheren UIDs von Firebase Auth verwenden würden.
-
-
-    // KORREKTUR: Unsichere UID-Generierung entfernt.
-    // In einer echten Anwendung wird die UID von Firebase Authentication bereitgestellt,
-    // nachdem sich ein Benutzer erfolgreich angemeldet hat.
-    // Beispiel: const uid = firebase.auth().currentUser.uid;
-    getUserUID(username) {
-        console.warn("UNSICHERE UID-ERZEUGUNG: Dies ist nur für den Demo-Modus. Verwenden Sie Firebase Auth!");
-        // Diese Funktion sollte durch eine echte UID von Firebase Auth ersetzt werden.
-        // Wir simulieren sie hier, aber sie ist nicht für den produktiven Einsatz geeignet.
-        return 'demo_' + username.toLowerCase().replace(/\s/g, '');
-    }
-
-    async saveUserProfile(username, data) {
-        const uid = this.getUserUID(username);
-        await this.writeData(`users/${uid}/profile`, {
-            name: username,
-            role: data.role || 'employee',
-            quota: data.quota || 40,
-            passwordHash: data.passwordHash, // Hash sollte serverseitig erstellt und gespeichert werden
-            lastUpdated: Date.now()
-        });
-    }
-
-    async savePlanningData(username, date, status) {
-        const uid = this.getUserUID(username);
-        const yearMonth = date.substring(0, 7); // YYYY-MM
-        const path = `plans/${uid}/${yearMonth}/${date}`;
-
-        if (status) {
-            await this.writeData(path, status);
-        } else {
-            await this.removeData(path);
-        }
+    renderTeamOverview() {
+        console.log('Rendering team overview...');
+        // Fügen Sie hier Ihre Logik zum Rendern der Team-Übersicht ein
     }
     
-    // ===== APPLICATION INITIALIZATION =====
-
-    async init() {
-        console.log('Initializing HomeOffice Planner...');
-
-        if (document.readyState === 'loading') {
-            await new Promise(resolve => document.addEventListener('DOMContentLoaded', resolve));
-        }
-
-        try {
-            await this.initializeFirebase();
-            this.showLoginScreen();
-            this.populateEmployeeSelect();
-            this.setupEventListeners();
-            console.log('HomeOffice Planner initialized successfully');
-        } catch (error) {
-            console.error('Failed to initialize HomeOffice Planner:', error);
-            this.updateConnectionStatus('🔴 Initialisierungsfehler');
-        }
+    switchTab(tab) {
+        console.log('Switching to tab:', tab);
+        // Fügen Sie hier Ihre Logik zum Wechseln der Tabs ein
     }
 
-    // KORREKTUR: Redundanter setTimeout entfernt. Das DOM ist bereits geladen.
-    setupEventListeners() {
-        console.log('Setting up event listeners...');
-        this.setupLoginListeners();
-        this.setupNavigationListeners();
-        this.setupModalListeners();
-        this.setupTeamleaderListeners();
-        this.setupPasswordListeners();
-        this.setupDeleteAccountListeners();
-        this.setupHomeofficeRuleListeners();
-        this.setupTeamOverviewListeners();
-        console.log('Event listeners setup complete');
+    init() {
+        this.initializeFirebase();
+        this.setupEventListeners();
     }
-
-    // ... (Alle `setup...Listeners` Methoden bleiben strukturell gleich, aber ihre Handler (z.B. loginAsEmployee) werden angepasst)
-
-    setupLoginListeners() {
-        const userTypeSelect = document.getElementById('userType');
-        const employeeLoginBtn = document.getElementById('employeeLoginBtn');
-        const teamleaderLoginBtn = document.getElementById('teamleaderLoginBtn');
-        const newEmployeeRegisterBtn = document.getElementById('newEmployeeRegisterBtn');
-
-        if (userTypeSelect) {
-            userTypeSelect.addEventListener('change', (e) => this.showLoginType(e.target.value));
-        }
-        if (employeeLoginBtn) {
-            employeeLoginBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.loginAsEmployee();
-            });
-        }
-        if (teamleaderLoginBtn) {
-            teamleaderLoginBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.loginAsTeamleader();
-            });
-        }
-        if (newEmployeeRegisterBtn) {
-            newEmployeeRegisterBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.registerNewEmployee();
-            });
-        }
-        
-        // Enter-Key-Handler
-        document.getElementById('employeePassword')?.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') this.loginAsEmployee();
-        });
-        document.getElementById('teamleaderPassword')?.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') this.loginAsTeamleader();
-        });
-        document.getElementById('newEmployeePasswordConfirm')?.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') this.registerNewEmployee();
-        });
-    }
-
-    // ... (Andere Listener-Setups bleiben gleich)
-    
-    // ===== UI & LOGIC METHODS =====
-
-    showLoginScreen() {
-        document.getElementById('loginScreen')?.classList.remove('hidden');
-        document.getElementById('mainApp')?.classList.add('hidden');
-        this.showLoginType('employee'); // Standardansicht beim Start
-    }
-
-    // KORREKTUR: Vervollständigte Funktion
-    showLoginType(type) {
-        console.log('Showing login type:', type);
-        const employeeLogin = document.getElementById('employeeLogin');
-        const teamleaderLogin = document.getElementById('teamleaderLogin');
-        const newEmployeeRegister = document.getElementById('newEmployeeRegister');
-
-        // Alle Sektionen ausblenden
-        if (employeeLogin) employeeLogin.style.display = 'none';
-        if (teamleaderLogin) teamleaderLogin.style.display = 'none';
-        if (newEmployeeRegister) newEmployeeRegister.style.display = 'none';
-
-        // Die gewählte Sektion einblenden
-        if (type === 'employee' && employeeLogin) {
-            employeeLogin.style.display = 'block';
-        } else if (type === 'teamleader' && teamleaderLogin) {
-            teamleaderLogin.style.display = 'block';
-        } else if (type === 'new-employee' && newEmployeeRegister) {
-            newEmployeeRegister.style.display = 'block';
-        }
-    }
-
-    // KORREKTUR: Login-Logik angepasst, um Klartext-Passwörter zu vermeiden.
-    async loginAsEmployee() {
-        const employeeSelect = document.getElementById('employeeSelect');
-        const passwordInput = document.getElementById('employeePassword');
-        const selectedUser = employeeSelect.value;
-        const password = passwordInput.value;
-
-        if (!selectedUser || !password) {
-            alert('Bitte wähle einen Benutzer aus und gib dein Passwort ein.');
-            return;
-        }
-
-        // --- SICHERHEITSHINWEIS ---
-        // In einer ECHTEN Anwendung würde hier ein Aufruf an Firebase Authentication stattfinden.
-        // Beispiel: firebase.auth().signInWithEmailAndPassword(email, password)
-        // Das Passwort wird NIEMALS im Frontend validiert.
-        // Für diese Demo simulieren wir einen erfolgreichen Login.
-        
-        console.log(`Simuliere Login für ${selectedUser}...`);
-
-        // Annahme: Login erfolgreich
-        this.currentUser = selectedUser;
-        this.userRole = 'employee';
-        this.currentUserUID = this.getUserUID(this.currentUser); // UID nach Login setzen
-
-        // Lade App-Ansicht
-        document.getElementById('loginScreen').classList.add('hidden');
-        document.getElementById('mainApp').classList.remove('hidden');
-        this.showViewForRole();
-        this.renderCalendar();
-        this.updateDashboard(this.currentUser);
-        
-        if (this.isFirebaseEnabled) {
-            this.setupDataListeners(this.currentUserUID);
-        }
-    }
-    
-    async loginAsTeamleader() {
-        const passwordInput = document.getElementById('teamleaderPassword');
-        const password = passwordInput.value;
-
-        if (!password) {
-            alert('Bitte gib das Teamleiter-Passwort ein.');
-            return;
-        }
-
-        // --- SICHERHEITSHINWEIS ---
-        // Auch hier: Die Validierung muss serverseitig erfolgen.
-        // Das Frontend sollte nicht wissen, ob das Passwort "teamleiter123" ist.
-        // Für Demo-Zwecke wird es hier hartkodiert verglichen.
-        if (password === "teamleiter123") { // NUR FÜR DEMO!
-            console.log("Teamleiter-Login erfolgreich (Demo)");
-            this.currentUser = 'Teamleiter';
-            this.userRole = 'teamleader';
-            this.currentUserUID = 'demo_teamleader';
-
-            document.getElementById('loginScreen').classList.add('hidden');
-            document.getElementById('mainApp').classList.remove('hidden');
-            this.showViewForRole();
-            this.renderTeamOverview();
-
-            if (this.isFirebaseEnabled) {
-                this.setupTeamDataListeners();
-            }
-        } else {
-            alert('Falsches Passwort.');
-        }
-    }
-    
-    // Platzhalter für die restlichen Methoden...
-    // Die Logik in den anderen Methoden (renderCalendar, setStatus, etc.)
-    // sollte weiterhin wie beabsichtigt funktionieren.
-    // ...
-    // ... (füge hier den Rest deiner unveränderten Methoden ein)
-    // ...
 }
 
-
-// ===== APP INITIALIZATION =====
-// Stellt sicher, dass das Skript erst läuft, wenn das DOM bereit ist.
+// Globaler Initialisierungs-Aufruf
+const planner = new HomeOfficePlanner();
 document.addEventListener('DOMContentLoaded', () => {
-    const planner = new HomeOfficePlanner();
     planner.init();
 });
