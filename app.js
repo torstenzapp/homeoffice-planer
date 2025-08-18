@@ -1,20 +1,4 @@
-// HomeOffice Planner JavaScript - Complete Firebase Realtime Database Integration
-class HomeOfficePlanner {
-    constructor() {
-        // Firebase integration
-        this.isFirebaseEnabled = false;
-        this.database = null;
-        this.currentUserUID = null;
-        this.dataListeners = new Map(); // Track active listeners
-
-        // ass.js  – Firebase einmalig initialisieren und global bereitstellen
-// Nutzt ES-Module. In deiner index.html so einbinden:
-// <script type="module" src="./ass.js"></script>
-
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getDatabase } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-
-// >>> Deine Firebase-Konfiguration
+// Firebase Configuration
 const firebaseConfig = {
   apiKey: "AIzaSyDdLYCXvtuXPUhehE-QfqaXWRfseGfwzf4",
   authDomain: "homeoffice-planer-drv.firebaseapp.com",
@@ -25,1966 +9,1404 @@ const firebaseConfig = {
   appId: "1:669565818222:web:9eb342704c1a74c5eedd7f"
 };
 
-// Schutz: nur einmal initialisieren
-function initFirebaseOnce() {
-  if (window.firebaseDB) {
-    console.log("Firebase bereits initialisiert.");
-    return window.firebaseDB;
-  }
+// Global Variables
+let app, database;
+let currentUser = null;
+let currentMonth = new Date().getMonth();
+let currentYear = new Date().getFullYear();
+let selectedDateForStatus = null;
+let isOnline = true;
+let localData = {};
+let isFirebaseInitialized = false;
+
+// German holidays for 2025-2030
+const holidays = {
+  2025: [
+    {datum: "2025-01-01", name: "Neujahr"},
+    {datum: "2025-04-18", name: "Karfreitag"},
+    {datum: "2025-04-21", name: "Ostermontag"},
+    {datum: "2025-05-01", name: "Tag der Arbeit"},
+    {datum: "2025-05-29", name: "Christi Himmelfahrt"},
+    {datum: "2025-06-09", name: "Pfingstmontag"},
+    {datum: "2025-06-19", name: "Fronleichnam"},
+    {datum: "2025-08-15", name: "Mariä Himmelfahrt"},
+    {datum: "2025-10-03", name: "Tag der Deutschen Einheit"},
+    {datum: "2025-11-01", name: "Allerheiligen"},
+    {datum: "2025-12-25", name: "1. Weihnachtsfeiertag"},
+    {datum: "2025-12-26", name: "2. Weihnachtsfeiertag"}
+  ],
+  2026: [
+    {datum: "2026-01-01", name: "Neujahr"},
+    {datum: "2026-04-03", name: "Karfreitag"},
+    {datum: "2026-04-06", name: "Ostermontag"},
+    {datum: "2026-05-01", name: "Tag der Arbeit"},
+    {datum: "2026-05-14", name: "Christi Himmelfahrt"},
+    {datum: "2026-05-25", name: "Pfingstmontag"},
+    {datum: "2026-06-04", name: "Fronleichnam"},
+    {datum: "2026-08-15", name: "Mariä Himmelfahrt"},
+    {datum: "2026-10-03", name: "Tag der Deutschen Einheit"},
+    {datum: "2026-11-01", name: "Allerheiligen"},
+    {datum: "2026-12-25", name: "1. Weihnachtsfeiertag"},
+    {datum: "2026-12-26", name: "2. Weihnachtsfeiertag"}
+  ]
+};
+
+// Status types
+const statusTypes = {
+  homeoffice: {name: "Home-Office", color: "#FF8C00", symbol: "🏠"},
+  buero: {name: "Büro", color: "#4169E1", symbol: "🏢"},
+  urlaub: {name: "Urlaub", color: "#32CD32", symbol: "🏖️"},
+  az: {name: "AZ", color: "#808080", symbol: "⏰"}
+};
+
+// Default users
+const defaultUsers = ["Torsten", "Anna", "Michael", "Sarah", "Thomas"];
+
+// SHA-256 Hash function
+async function hashPassword(password) {
   try {
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-    window.firebaseDB = db; // <- von deiner App erwartet
-    console.log("✅ Firebase verbunden.");
-    return db;
-  } catch (err) {
-    console.error("❌ Firebase-Init fehlgeschlagen:", err);
-    return null;
+    const encoder = new TextEncoder();
+    const data = encoder.encode(password);
+    const hash = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(hash))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+  } catch (error) {
+    console.error('Error hashing password:', error);
+    // Fallback to simple hash if crypto.subtle is not available
+    return btoa(password).replace(/[^a-zA-Z0-9]/g, '');
   }
 }
 
-initFirebaseOnce();
-
-// Export leer halten (damit es ein Modul bleibt)
-export {};
-        // Extended holidays data through 2030
-        this.holidays = {
-            "2025": [
-                {"datum": "2025-01-01", "name": "Neujahr"},
-                {"datum": "2025-04-18", "name": "Karfreitag"},
-                {"datum": "2025-04-21", "name": "Ostermontag"},
-                {"datum": "2025-05-01", "name": "Tag der Arbeit"},
-                {"datum": "2025-05-29", "name": "Christi Himmelfahrt"},
-                {"datum": "2025-06-09", "name": "Pfingstmontag"},
-                {"datum": "2025-06-19", "name": "Fronleichnam"},
-                {"datum": "2025-08-15", "name": "Mariä Himmelfahrt"},
-                {"datum": "2025-10-03", "name": "Tag der Deutschen Einheit"},
-                {"datum": "2025-11-01", "name": "Allerheiligen"},
-                {"datum": "2025-12-25", "name": "1. Weihnachtsfeiertag"},
-                {"datum": "2025-12-26", "name": "2. Weihnachtsfeiertag"}
-            ],
-            "2026": [
-                {"datum": "2026-01-01", "name": "Neujahr"},
-                {"datum": "2026-04-03", "name": "Karfreitag"},
-                {"datum": "2026-04-06", "name": "Ostermontag"},
-                {"datum": "2026-05-01", "name": "Tag der Arbeit"},
-                {"datum": "2026-05-14", "name": "Christi Himmelfahrt"},
-                {"datum": "2026-05-25", "name": "Pfingstmontag"},
-                {"datum": "2026-06-04", "name": "Fronleichnam"},
-                {"datum": "2026-08-15", "name": "Mariä Himmelfahrt"},
-                {"datum": "2026-10-03", "name": "Tag der Deutschen Einheit"},
-                {"datum": "2026-11-01", "name": "Allerheiligen"},
-                {"datum": "2026-12-25", "name": "1. Weihnachtsfeiertag"},
-                {"datum": "2026-12-26", "name": "2. Weihnachtsfeiertag"}
-            ],
-            "2027": [
-                {"datum": "2027-01-01", "name": "Neujahr"},
-                {"datum": "2027-03-26", "name": "Karfreitag"},
-                {"datum": "2027-03-29", "name": "Ostermontag"},
-                {"datum": "2027-05-01", "name": "Tag der Arbeit"},
-                {"datum": "2027-05-06", "name": "Christi Himmelfahrt"},
-                {"datum": "2027-05-17", "name": "Pfingstmontag"},
-                {"datum": "2027-05-27", "name": "Fronleichnam"},
-                {"datum": "2027-08-15", "name": "Mariä Himmelfahrt"},
-                {"datum": "2027-10-03", "name": "Tag der Deutschen Einheit"},
-                {"datum": "2027-11-01", "name": "Allerheiligen"},
-                {"datum": "2027-12-25", "name": "1. Weihnachtsfeiertag"},
-                {"datum": "2027-12-26", "name": "2. Weihnachtsfeiertag"}
-            ],
-            "2028": [
-                {"datum": "2028-01-01", "name": "Neujahr"},
-                {"datum": "2028-04-14", "name": "Karfreitag"},
-                {"datum": "2028-04-17", "name": "Ostermontag"},
-                {"datum": "2028-05-01", "name": "Tag der Arbeit"},
-                {"datum": "2028-05-25", "name": "Christi Himmelfahrt"},
-                {"datum": "2028-06-05", "name": "Pfingstmontag"},
-                {"datum": "2028-06-15", "name": "Fronleichnam"},
-                {"datum": "2028-08-15", "name": "Mariä Himmelfahrt"},
-                {"datum": "2028-10-03", "name": "Tag der Deutschen Einheit"},
-                {"datum": "2028-11-01", "name": "Allerheiligen"},
-                {"datum": "2028-12-25", "name": "1. Weihnachtsfeiertag"},
-                {"datum": "2028-12-26", "name": "2. Weihnachtsfeiertag"}
-            ],
-            "2029": [
-                {"datum": "2029-01-01", "name": "Neujahr"},
-                {"datum": "2029-03-30", "name": "Karfreitag"},
-                {"datum": "2029-04-02", "name": "Ostermontag"},
-                {"datum": "2029-05-01", "name": "Tag der Arbeit"},
-                {"datum": "2029-05-10", "name": "Christi Himmelfahrt"},
-                {"datum": "2029-05-21", "name": "Pfingstmontag"},
-                {"datum": "2029-05-31", "name": "Fronleichnam"},
-                {"datum": "2029-08-15", "name": "Mariä Himmelfahrt"},
-                {"datum": "2029-10-03", "name": "Tag der Deutschen Einheit"},
-                {"datum": "2029-11-01", "name": "Allerheiligen"},
-                {"datum": "2029-12-25", "name": "1. Weihnachtsfeiertag"},
-                {"datum": "2029-12-26", "name": "2. Weihnachtsfeiertag"}
-            ],
-            "2030": [
-                {"datum": "2030-01-01", "name": "Neujahr"},
-                {"datum": "2030-04-19", "name": "Karfreitag"},
-                {"datum": "2030-04-22", "name": "Ostermontag"},
-                {"datum": "2030-05-01", "name": "Tag der Arbeit"},
-                {"datum": "2030-05-30", "name": "Christi Himmelfahrt"},
-                {"datum": "2030-06-10", "name": "Pfingstmontag"},
-                {"datum": "2030-06-20", "name": "Fronleichnam"},
-                {"datum": "2030-08-15", "name": "Mariä Himmelfahrt"},
-                {"datum": "2030-10-03", "name": "Tag der Deutschen Einheit"},
-                {"datum": "2030-11-01", "name": "Allerheiligen"},
-                {"datum": "2030-12-25", "name": "1. Weihnachtsfeiertag"},
-                {"datum": "2030-12-26", "name": "2. Weihnachtsfeiertag"}
-            ]
-        };
-
-        this.statusTypes = {
-            "homeoffice": {"name": "Home-Office", "color": "#FF8C00", "symbol": "🏠"},
-            "buero": {"name": "Büro", "color": "#4169E1", "symbol": "🏢"},
-            "urlaub": {"name": "Urlaub", "color": "#32CD32", "symbol": "🏖️"},
-            "az": {"name": "AZ", "color": "#808080", "symbol": "⏰"}
-        };
-
-        // Password configuration
-        this.teamleaderPassword = "teamleiter123";
-        this.defaultPassword = "password123";
-        this.newPasswordDefault = "NeuesPasswort123";
-
-        // Application state
-        this.colleagues = ["Torsten", "Anna", "Michael", "Sarah", "Thomas"];
-        this.currentUser = null;
-        this.userRole = null;
-        this.currentDate = new Date();
-        this.planningData = {};
-        this.colleaguePasswords = {};
-        this.homeofficeRules = {};
-        this.selectedDateForStatus = null;
-        this.activeTab = 'overview';
-        this.selectedColleagueForAction = null;
-        this.isTeamOverviewMode = false;
-
-        // Initialize default data
-        this.initializeDefaultPasswords();
-        this.initializeDefaultRules();
-    }
-
-    // ===== FIREBASE INTEGRATION =====
+// Initialize Firebase with better error handling
+function initializeFirebase() {
+  try {
+    console.log('Initializing Firebase...');
+    app = firebase.initializeApp(firebaseConfig);
+    database = firebase.database();
+    isFirebaseInitialized = true;
     
-    async initializeFirebase() {
-        try {
-            // Add a timeout for Firebase initialization
-            const timeout = new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('Firebase initialization timeout')), 5000)
-            );
-
-            const firebaseCheck = new Promise((resolve) => {
-                if (window.firebaseDB && typeof window.firebaseDB === 'object') {
-                    this.database = window.firebaseDB;
-                    this.isFirebaseEnabled = true;
-                    resolve(true);
-                } else {
-                    resolve(false);
-                }
-            });
-
-            const result = await Promise.race([firebaseCheck, timeout]);
-            
-            if (result && this.isFirebaseEnabled) {
-                await this.setupConnectionMonitoring();
-                this.updateConnectionStatus('🟢 Firebase verbunden');
-                console.log('Firebase successfully initialized');
-                return true;
-            } else {
-                throw new Error('Firebase not available');
-            }
-        } catch (error) {
-            console.log('Firebase not available - using local mode:', error.message);
-            this.isFirebaseEnabled = false;
-            this.updateConnectionStatus('🔴 Offline Modus');
-            return false;
-        }
-    }
-
-    async setupConnectionMonitoring() {
-        if (!this.isFirebaseEnabled) return;
-
-        try {
-            // Import Firebase functions dynamically
-            const { ref, onValue } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js');
-            
-            // Monitor connection status
-            const connectedRef = ref(this.database, '.info/connected');
-            onValue(connectedRef, (snapshot) => {
-                if (snapshot.val() === true) {
-                    this.updateLiveStatus('🟢 Live');
-                } else {
-                    this.updateLiveStatus('🔴 Offline');
-                }
-            });
-        } catch (error) {
-            console.error('Connection monitoring setup failed:', error);
-            this.updateLiveStatus('🔴 Offline');
-        }
-    }
-
-    updateConnectionStatus(status) {
-        const statusElement = document.getElementById('connectionStatus');
-        if (statusElement) {
-            statusElement.textContent = status;
-        }
-    }
-
-    updateLiveStatus(status) {
-        const statusElement = document.getElementById('liveStatus');
-        if (statusElement) {
-            statusElement.textContent = status;
-        }
-    }
-
-    // SHA-256 Hash function
-    async sha256Hash(message) {
-        if (typeof window !== 'undefined' && window.crypto && window.crypto.subtle) {
-            try {
-                const msgBuffer = new TextEncoder().encode(message);
-                const hashBuffer = await window.crypto.subtle.digest('SHA-256', msgBuffer);
-                const hashArray = Array.from(new Uint8Array(hashBuffer));
-                return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-            } catch (error) {
-                console.warn('SHA-256 not available, using fallback:', error);
-                return this.simpleHash(message);
-            }
-        } else {
-            // Fallback for environments without crypto.subtle
-            return this.simpleHash(message);
-        }
-    }
-
-    // Firebase Data Operations
-    async writeData(path, data) {
-        if (!this.isFirebaseEnabled) {
-            console.log('Firebase not enabled - data not saved to cloud');
-            return;
-        }
-
-        try {
-            const { ref, set } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js');
-            const dataRef = ref(this.database, path);
-            await set(dataRef, data);
-        } catch (error) {
-            console.error('Error writing data:', error);
-        }
-    }
-
-    async updateData(path, updates) {
-        if (!this.isFirebaseEnabled) {
-            console.log('Firebase not enabled - data not updated in cloud');
-            return;
-        }
-
-        try {
-            const { ref, update } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js');
-            const dataRef = ref(this.database, path);
-            await update(dataRef, updates);
-        } catch (error) {
-            console.error('Error updating data:', error);
-        }
-    }
-
-    async removeData(path) {
-        if (!this.isFirebaseEnabled) {
-            console.log('Firebase not enabled - data not removed from cloud');
-            return;
-        }
-
-        try {
-            const { ref, remove } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js');
-            const dataRef = ref(this.database, path);
-            await remove(dataRef);
-        } catch (error) {
-            console.error('Error removing data:', error);
-        }
-    }
-
-    async setupDataListeners(uid) {
-        if (!this.isFirebaseEnabled) return;
-
-        try {
-            const { ref, onValue } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js');
-
-            // Listen to user profile changes
-            const userRef = ref(this.database, `users/${uid}/profile`);
-            const userListener = onValue(userRef, (snapshot) => {
-                const userData = snapshot.val();
-                if (userData) {
-                    this.handleUserDataUpdate(userData);
-                }
-            });
-            this.dataListeners.set(`user_${uid}`, userListener);
-
-            // Listen to planning data changes
-            const plansRef = ref(this.database, `plans/${uid}`);
-            const plansListener = onValue(plansRef, (snapshot) => {
-                const plansData = snapshot.val();
-                this.handlePlansDataUpdate(plansData || {});
-            });
-            this.dataListeners.set(`plans_${uid}`, plansListener);
-
-            // For teamleader, listen to all users
-            if (this.userRole === 'teamleader') {
-                this.setupTeamDataListeners();
-            }
-
-        } catch (error) {
-            console.error('Error setting up data listeners:', error);
-        }
-    }
-
-    async setupTeamDataListeners() {
-        if (!this.isFirebaseEnabled || this.userRole !== 'teamleader') return;
-
-        try {
-            const { ref, onValue } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js');
-
-            // Listen to all users
-            const allUsersRef = ref(this.database, 'users');
-            const allUsersListener = onValue(allUsersRef, (snapshot) => {
-                const allUsers = snapshot.val();
-                if (allUsers) {
-                    this.handleAllUsersDataUpdate(allUsers);
-                }
-            });
-            this.dataListeners.set('all_users', allUsersListener);
-
-            // Listen to all plans
-            const allPlansRef = ref(this.database, 'plans');
-            const allPlansListener = onValue(allPlansRef, (snapshot) => {
-                const allPlans = snapshot.val();
-                this.handleAllPlansDataUpdate(allPlans || {});
-            });
-            this.dataListeners.set('all_plans', allPlansListener);
-
-        } catch (error) {
-            console.error('Error setting up team data listeners:', error);
-        }
-    }
-
-    handleUserDataUpdate(userData) {
-        if (userData.quota) {
-            this.homeofficeRules[this.currentUser] = userData.quota;
-        }
-        // Update UI if needed
-        if (this.userRole === 'employee' && !this.isTeamOverviewMode) {
-            this.updateDashboard(this.currentUser);
-        }
-    }
-
-    handlePlansDataUpdate(plansData) {
-        if (!this.planningData[this.currentUser]) {
-            this.planningData[this.currentUser] = {};
-        }
-        
-        // Flatten the monthly data structure
-        for (const monthKey in plansData) {
-            const monthData = plansData[monthKey];
-            for (const dateKey in monthData) {
-                this.planningData[this.currentUser][dateKey] = monthData[dateKey];
-            }
-        }
-        
-        // Update UI
-        this.renderCalendar();
-        if (this.userRole === 'employee' && !this.isTeamOverviewMode) {
-            this.updateDashboard(this.currentUser);
-        }
-    }
-
-    handleAllUsersDataUpdate(allUsers) {
-        this.colleagues = [];
-        for (const uid in allUsers) {
-            const userData = allUsers[uid];
-            if (userData.profile && userData.profile.name) {
-                this.colleagues.push(userData.profile.name);
-                if (userData.profile.quota) {
-                    this.homeofficeRules[userData.profile.name] = userData.profile.quota;
-                }
-            }
-        }
-        
-        // Update UI
-        this.populateEmployeeSelect();
-        this.populateDetailColleagueSelect();
-        if (this.activeTab === 'overview') {
-            this.renderTeamOverview();
-        }
-    }
-
-    handleAllPlansDataUpdate(allPlans) {
-        this.planningData = {};
-        
-        // Process all users' plans
-        for (const uid in allPlans) {
-            // Find username for this UID
-            let username = null;
-            // This is a simplified mapping - in real implementation, you'd maintain a UID->username mapping
-            for (const colleague of this.colleagues) {
-                if (this.getUserUID(colleague) === uid) {
-                    username = colleague;
-                    break;
-                }
-            }
-            
-            if (username) {
-                this.planningData[username] = {};
-                const userPlans = allPlans[uid];
-                
-                // Flatten monthly structure
-                for (const monthKey in userPlans) {
-                    const monthData = userPlans[monthKey];
-                    for (const dateKey in monthData) {
-                        this.planningData[username][dateKey] = monthData[dateKey];
-                    }
-                }
-            }
-        }
-        
-        // Update UI
-        this.renderCalendar();
-        if (this.isTeamOverviewMode) {
-            this.renderTeamCalendars();
-        }
-        if (this.activeTab === 'overview') {
-            this.renderTeamOverview();
-        }
-    }
-
-    cleanupDataListeners() {
-        // Remove all active listeners
-        for (const [key, unsubscribe] of this.dataListeners) {
-            if (typeof unsubscribe === 'function') {
-                unsubscribe();
-            }
-        }
-        this.dataListeners.clear();
-    }
-
-    getUserUID(username) {
-        // Simple UID generation based on username
-        // In production, this should be a proper Firebase Auth UID
-        return btoa(username).replace(/[^a-zA-Z0-9]/g, '').substr(0, 20);
-    }
-
-    async saveUserProfile(username, data) {
-        const uid = this.getUserUID(username);
-        await this.writeData(`users/${uid}/profile`, {
-            name: username,
-            role: data.role || 'employee',
-            quota: data.quota || 40,
-            passwordHash: data.passwordHash,
-            lastUpdated: Date.now()
-        });
-    }
-
-    async savePlanningData(username, date, status) {
-        const uid = this.getUserUID(username);
-        const yearMonth = date.substring(0, 7); // YYYY-MM
-        
-        if (status) {
-            await this.writeData(`plans/${uid}/${yearMonth}/${date}`, status);
-        } else {
-            await this.removeData(`plans/${uid}/${yearMonth}/${date}`);
-        }
-    }
-
-    // ===== ORIGINAL FUNCTIONALITY =====
-
-    initializeDefaultPasswords() {
-        this.colleagues.forEach(colleague => {
-            this.colleaguePasswords[colleague] = this.simpleHash(this.defaultPassword);
-        });
-    }
-
-    initializeDefaultRules() {
-        this.colleagues.forEach(colleague => {
-            this.homeofficeRules[colleague] = 40;
-        });
-    }
-
-    simpleHash(str) {
-        let hash = 0;
-        if (str.length === 0) return hash.toString();
-        for (let i = 0; i < str.length; i++) {
-            const char = str.charCodeAt(i);
-            hash = ((hash << 5) - hash) + char;
-            hash = hash & hash;
-        }
-        return Math.abs(hash).toString();
-    }
-
-    async init() {
-        console.log('Initializing HomeOffice Planner...');
-        
-        // Wait for DOM to be ready
-        if (document.readyState === 'loading') {
-            await new Promise(resolve => {
-                document.addEventListener('DOMContentLoaded', resolve);
-            });
-        }
-
-        try {
-            // Initialize Firebase with timeout
-            await this.initializeFirebase();
-            
-            // Setup UI
-            this.showLoginScreen();
-            this.populateEmployeeSelect();
-            this.setupEventListeners();
-            
-            console.log('HomeOffice Planner initialized successfully');
-        } catch (error) {
-            console.error('Failed to initialize HomeOffice Planner:', error);
-            this.updateConnectionStatus('🔴 Initialisierungsfehler');
-        }
-    }
-
-    setupEventListeners() {
-        console.log('Setting up event listeners...');
-        
-        // Use setTimeout to ensure DOM is ready
-        setTimeout(() => {
-            this.setupLoginListeners();
-            this.setupNavigationListeners();
-            this.setupModalListeners();
-            this.setupTeamleaderListeners();
-            this.setupPasswordListeners();
-            this.setupDeleteAccountListeners();
-            this.setupHomeofficeRuleListeners();
-            this.setupTeamOverviewListeners();
-            console.log('Event listeners setup complete');
-        }, 100);
-    }
-
-    setupLoginListeners() {
-        const userTypeSelect = document.getElementById('userType');
-        const employeeLoginBtn = document.getElementById('employeeLoginBtn');
-        const teamleaderLoginBtn = document.getElementById('teamleaderLoginBtn');
-        const newEmployeeRegisterBtn = document.getElementById('newEmployeeRegisterBtn');
-
-        console.log('Setting up login listeners...', {
-            userTypeSelect: !!userTypeSelect,
-            employeeLoginBtn: !!employeeLoginBtn,
-            teamleaderLoginBtn: !!teamleaderLoginBtn,
-            newEmployeeRegisterBtn: !!newEmployeeRegisterBtn
-        });
-
-        if (userTypeSelect) {
-            // Remove any existing listeners
-            const newSelect = userTypeSelect.cloneNode(true);
-            userTypeSelect.parentNode.replaceChild(newSelect, userTypeSelect);
-            
-            newSelect.addEventListener('change', (e) => {
-                console.log('User type changed:', e.target.value);
-                this.showLoginType(e.target.value);
-            });
-        }
-
-        if (employeeLoginBtn) {
-            employeeLoginBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                console.log('Employee login clicked');
-                this.loginAsEmployee();
-            });
-        }
-
-        if (teamleaderLoginBtn) {
-            teamleaderLoginBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                console.log('Teamleader login clicked');
-                this.loginAsTeamleader();
-            });
-        }
-
-        if (newEmployeeRegisterBtn) {
-            newEmployeeRegisterBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                console.log('New employee register clicked');
-                this.registerNewEmployee();
-            });
-        }
-
-        // Enter key handling
-        const employeePassword = document.getElementById('employeePassword');
-        if (employeePassword) {
-            employeePassword.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    this.loginAsEmployee();
-                }
-            });
-        }
-
-        const teamleaderPassword = document.getElementById('teamleaderPassword');
-        if (teamleaderPassword) {
-            teamleaderPassword.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    this.loginAsTeamleader();
-                }
-            });
-        }
-
-        const newEmployeePasswordConfirm = document.getElementById('newEmployeePasswordConfirm');
-        if (newEmployeePasswordConfirm) {
-            newEmployeePasswordConfirm.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    this.registerNewEmployee();
-                }
-            });
-        }
-    }
-
-    setupNavigationListeners() {
-        const prevBtn = document.getElementById('prevMonth');
-        const nextBtn = document.getElementById('nextMonth');
-        const logoutBtn = document.getElementById('logoutBtn');
-
-        if (prevBtn) {
-            prevBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.navigateMonth(-1);
-            });
-        }
-        
-        if (nextBtn) {
-            nextBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.navigateMonth(1);
-            });
-        }
-        
-        if (logoutBtn) {
-            logoutBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.logout();
-            });
-        }
-    }
-
-    setupModalListeners() {
-        const cancelStatusBtn = document.getElementById('cancelStatusChange');
-
-        if (cancelStatusBtn) {
-            cancelStatusBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.hideStatusModal();
-            });
-        }
-
-        document.querySelectorAll('.status-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.preventDefault();
-                const status = e.currentTarget.dataset.status;
-                this.setStatus(status);
-            });
-        });
-
-        document.querySelectorAll('.modal__overlay').forEach(overlay => {
-            overlay.addEventListener('click', (e) => {
-                if (e.target === overlay) {
-                    this.hideAllModals();
-                }
-            });
-        });
-    }
-
-    setupHomeofficeRuleListeners() {
-        const homeofficeRule = document.getElementById('homeofficeRule');
-        if (homeofficeRule) {
-            homeofficeRule.addEventListener('change', async (e) => {
-                if (this.currentUser && this.userRole === 'employee') {
-                    const newQuota = parseInt(e.target.value);
-                    this.homeofficeRules[this.currentUser] = newQuota;
-                    
-                    // Save to Firebase
-                    const currentPasswordHash = this.colleaguePasswords[this.currentUser];
-                    await this.saveUserProfile(this.currentUser, {
-                        role: 'employee',
-                        quota: newQuota,
-                        passwordHash: currentPasswordHash
-                    });
-                    
-                    this.updateDashboard(this.currentUser);
-                }
-            });
-        }
-
-        const teamleaderHomeofficeRule = document.getElementById('teamleaderHomeofficeRule');
-        if (teamleaderHomeofficeRule) {
-            teamleaderHomeofficeRule.addEventListener('change', (e) => {
-                if (this.userRole === 'teamleader') {
-                    this.renderTeamOverview();
-                }
-            });
-        }
-    }
-
-    setupTeamOverviewListeners() {
-        const teamOverviewBtn = document.getElementById('teamOverviewBtn');
-        if (teamOverviewBtn) {
-            teamOverviewBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.showTeamOverview();
-            });
-        }
-
-        const teamleaderTeamOverviewBtn = document.getElementById('teamleaderTeamOverviewBtn');
-        if (teamleaderTeamOverviewBtn) {
-            teamleaderTeamOverviewBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.showTeamOverview();
-            });
-        }
-
-        const backToDashboard = document.getElementById('backToDashboard');
-        if (backToDashboard) {
-            backToDashboard.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.hideTeamOverview();
-            });
-        }
-    }
-
-    setupPasswordListeners() {
-        const changePasswordBtn = document.getElementById('changePasswordBtn');
-        if (changePasswordBtn) {
-            changePasswordBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.showChangePasswordModal();
-            });
-        }
-
-        const confirmPasswordChangeBtn = document.getElementById('confirmPasswordChange');
-        const cancelPasswordChangeBtn = document.getElementById('cancelPasswordChange');
-
-        if (confirmPasswordChangeBtn) {
-            confirmPasswordChangeBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.changePassword();
-            });
-        }
-
-        if (cancelPasswordChangeBtn) {
-            cancelPasswordChangeBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.hideChangePasswordModal();
-            });
-        }
-
-        const confirmResetPasswordBtn = document.getElementById('confirmResetPassword');
-        const cancelResetPasswordBtn = document.getElementById('cancelResetPassword');
-
-        if (confirmResetPasswordBtn) {
-            confirmResetPasswordBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.resetColleaguePassword();
-            });
-        }
-
-        if (cancelResetPasswordBtn) {
-            cancelResetPasswordBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.hideResetPasswordModal();
-            });
-        }
-    }
-
-    setupDeleteAccountListeners() {
-        const deleteAccountBtn = document.getElementById('deleteAccountBtn');
-        if (deleteAccountBtn) {
-            deleteAccountBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.showDeleteAccountModal();
-            });
-        }
-
-        const confirmDeleteAccountBtn = document.getElementById('confirmDeleteAccount');
-        const cancelDeleteAccountBtn = document.getElementById('cancelDeleteAccount');
-
-        if (confirmDeleteAccountBtn) {
-            confirmDeleteAccountBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.deleteCurrentUserAccount();
-            });
-        }
-
-        if (cancelDeleteAccountBtn) {
-            cancelDeleteAccountBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.hideDeleteAccountModal();
-            });
-        }
-
-        const confirmDeleteColleagueBtn = document.getElementById('confirmDeleteColleague');
-        const cancelDeleteColleagueBtn = document.getElementById('cancelDeleteColleague');
-
-        if (confirmDeleteColleagueBtn) {
-            confirmDeleteColleagueBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.deleteColleague();
-            });
-        }
-
-        if (cancelDeleteColleagueBtn) {
-            cancelDeleteColleagueBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.hideDeleteColleagueModal();
-            });
-        }
-    }
-
-    setupTeamleaderListeners() {
-        document.querySelectorAll('.nav-tab').forEach(tab => {
-            tab.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.switchTab(e.target.dataset.tab);
-            });
-        });
-
-        const detailColleagueSelect = document.getElementById('detailColleagueSelect');
-        if (detailColleagueSelect) {
-            detailColleagueSelect.addEventListener('change', (e) => {
-                this.showColleagueDetail(e.target.value);
-            });
-        }
-
-        const statusFilter = document.getElementById('statusFilter');
-        if (statusFilter) {
-            statusFilter.addEventListener('change', () => {
-                this.renderTeamOverview();
-            });
-        }
-
-        const exportBtn = document.getElementById('exportReportBtn');
-        if (exportBtn) {
-            exportBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.exportMonthReport();
-            });
-        }
-    }
-
-    showLoginScreen() {
-        console.log('Showing login screen...');
-        const loginScreen = document.getElementById('loginScreen');
-        const mainApp = document.getElementById('mainApp');
-        
-        if (loginScreen) {
-            loginScreen.classList.remove('hidden');
-            console.log('Login screen shown');
-        }
-        if (mainApp) mainApp.classList.add('hidden');
-    }
-
-    showLoginType(type) {
-        console.log('Showing login type:', type);
-        const employeeLogin = document.getElementById('employeeLogin');
-        const teamleaderLogin = document.getElementById('teamleaderLogin');
-        const newEmployeeLogin = document.getElementById('newEmployeeLogin');
-
-        // Hide all first
-        if (employeeLogin) employeeLogin.classList.add('hidden');
-        if (teamleaderLogin) teamleaderLogin.classList.add('hidden');
-        if (newEmployeeLogin) newEmployeeLogin.classList.add('hidden');
-
-        // Show the selected type
-        if (type === 'employee' && employeeLogin) {
-            employeeLogin.classList.remove('hidden');
-            console.log('Employee login shown');
-        } else if (type === 'teamleader' && teamleaderLogin) {
-            teamleaderLogin.classList.remove('hidden');
-            console.log('Teamleader login shown');
-        } else if (type === 'newEmployee' && newEmployeeLogin) {
-            newEmployeeLogin.classList.remove('hidden');
-            console.log('New employee login shown');
-        }
-    }
-
-    populateEmployeeSelect() {
-        console.log('Populating employee select...');
-        const select = document.getElementById('employeeName');
-        if (!select) {
-            console.warn('Employee select not found');
-            return;
-        }
-        
-        select.innerHTML = '<option value="">-- Kollege auswählen --</option>';
-        
-        this.colleagues.forEach(colleague => {
-            const option = document.createElement('option');
-            option.value = colleague;
-            option.textContent = colleague;
-            select.appendChild(option);
-        });
-        
-        console.log('Employee select populated with', this.colleagues.length, 'colleagues');
-    }
-
-    async loginAsEmployee() {
-        const employeeName = document.getElementById('employeeName');
-        const employeePassword = document.getElementById('employeePassword');
-        
-        console.log('Attempting employee login...');
-        
-        if (!employeeName || !employeeName.value) {
-            alert('Bitte wählen Sie einen Kollegen aus.');
-            return;
-        }
-
-        if (!employeePassword || !employeePassword.value) {
-            alert('Bitte geben Sie ein Passwort ein.');
-            return;
-        }
-
-        const hashedPassword = await this.sha256Hash(employeePassword.value);
-        const storedPassword = this.colleaguePasswords[employeeName.value];
-
-        if (hashedPassword !== storedPassword) {
-            alert('Falsches Passwort!');
-            return;
-        }
-
-        this.currentUser = employeeName.value;
-        this.currentUserUID = this.getUserUID(this.currentUser);
-        this.userRole = 'employee';
-        
-        console.log('Employee login successful:', this.currentUser);
-        
-        // Setup Firebase listeners for this user
-        await this.setupDataListeners(this.currentUserUID);
-        
-        this.showMainApplication();
-    }
-
-    async loginAsTeamleader() {
-        const teamleaderPassword = document.getElementById('teamleaderPassword');
-        
-        console.log('Attempting teamleader login...');
-        
-        if (!teamleaderPassword || !teamleaderPassword.value) {
-            alert('Bitte geben Sie das Teamleiter-Passwort ein.');
-            return;
-        }
-
-        if (teamleaderPassword.value !== this.teamleaderPassword) {
-            alert('Falsches Teamleiter-Passwort!');
-            return;
-        }
-
-        this.currentUser = "Teamleiter";
-        this.userRole = 'teamleader';
-        
-        console.log('Teamleader login successful');
-        
-        // Setup Firebase listeners for teamleader
-        await this.setupTeamDataListeners();
-        
-        this.showMainApplication();
-    }
-
-    async registerNewEmployee() {
-        const newEmployeeName = document.getElementById('newEmployeeName');
-        const newEmployeePassword = document.getElementById('newEmployeePassword');
-        const newEmployeePasswordConfirm = document.getElementById('newEmployeePasswordConfirm');
-        
-        console.log('Attempting new employee registration...');
-        
-        if (!newEmployeeName || !newEmployeeName.value.trim()) {
-            alert('Bitte geben Sie einen Namen ein.');
-            return;
-        }
-
-        if (!newEmployeePassword || !newEmployeePassword.value) {
-            alert('Bitte geben Sie ein Passwort ein.');
-            return;
-        }
-
-        if (!newEmployeePasswordConfirm || !newEmployeePasswordConfirm.value) {
-            alert('Bitte bestätigen Sie das Passwort.');
-            return;
-        }
-
-        if (newEmployeePassword.value !== newEmployeePasswordConfirm.value) {
-            alert('Die Passwörter stimmen nicht überein.');
-            return;
-        }
-
-        if (newEmployeePassword.value.length < 6) {
-            alert('Das Passwort muss mindestens 6 Zeichen lang sein.');
-            return;
-        }
-
-        const name = newEmployeeName.value.trim();
-
-        if (this.colleagues.includes(name)) {
-            alert('Dieser Name ist bereits vergeben!');
-            return;
-        }
-
-        // Add new colleague
-        this.colleagues.push(name);
-        this.planningData[name] = {};
-        const hashedPassword = await this.sha256Hash(newEmployeePassword.value);
-        this.colleaguePasswords[name] = hashedPassword;
-        this.homeofficeRules[name] = 40;
-        
-        // Save to Firebase
-        await this.saveUserProfile(name, {
-            role: 'employee',
-            quota: 40,
-            passwordHash: hashedPassword
-        });
-        
-        this.populateEmployeeSelect();
-        
-        this.currentUser = name;
-        this.currentUserUID = this.getUserUID(name);
-        this.userRole = 'employee';
-        
-        console.log('New employee registration successful:', name);
-        
-        // Setup Firebase listeners for new user
-        await this.setupDataListeners(this.currentUserUID);
-        
-        this.showMainApplication();
-    }
-
-    showMainApplication() {
-        console.log('Showing main application...');
-        const loginScreen = document.getElementById('loginScreen');
-        const mainApp = document.getElementById('mainApp');
-        const currentUserSpan = document.getElementById('currentUser');
-        const securityNotice = document.getElementById('securityNotice');
-        const teamleaderNav = document.getElementById('teamleaderNav');
-        const employeeView = document.getElementById('employeeView');
-        const teamleaderView = document.getElementById('teamleaderView');
-
-        if (loginScreen) loginScreen.classList.add('hidden');
-        if (mainApp) mainApp.classList.remove('hidden');
-        if (currentUserSpan) currentUserSpan.textContent = this.currentUser;
-
-        if (this.userRole === 'teamleader') {
-            if (securityNotice) securityNotice.classList.remove('hidden');
-            if (teamleaderNav) teamleaderNav.classList.remove('hidden');
-            if (employeeView) employeeView.classList.add('hidden');
-            if (teamleaderView) teamleaderView.classList.remove('hidden');
-            
-            this.populateDetailColleagueSelect();
-            this.renderTeamOverview();
-            this.switchTab('overview');
-        } else {
-            if (securityNotice) securityNotice.classList.add('hidden');
-            if (teamleaderNav) teamleaderNav.classList.add('hidden');
-            if (employeeView) employeeView.classList.remove('hidden');
-            if (teamleaderView) teamleaderView.classList.add('hidden');
-            
-            this.selectEmployee(this.currentUser);
-        }
-
-        this.updateCurrentMonth();
-        this.renderCalendar();
-        
-        console.log('Main application shown for user:', this.currentUser, 'role:', this.userRole);
-    }
-
-    logout() {
-        console.log('Logging out...');
-        // Clean up Firebase listeners
-        this.cleanupDataListeners();
-        
-        this.currentUser = null;
-        this.currentUserUID = null;
-        this.userRole = null;
-        this.activeTab = 'overview';
-        this.isTeamOverviewMode = false;
-        
-        // Reset login form
-        const userTypeSelect = document.getElementById('userType');
-        const employeeName = document.getElementById('employeeName');
-        const employeePassword = document.getElementById('employeePassword');
-        const teamleaderPassword = document.getElementById('teamleaderPassword');
-        const newEmployeeName = document.getElementById('newEmployeeName');
-        const newEmployeePassword = document.getElementById('newEmployeePassword');
-        const newEmployeePasswordConfirm = document.getElementById('newEmployeePasswordConfirm');
-        
-        if (userTypeSelect) userTypeSelect.value = '';
-        if (employeeName) employeeName.value = '';
-        if (employeePassword) employeePassword.value = '';
-        if (teamleaderPassword) teamleaderPassword.value = '';
-        if (newEmployeeName) newEmployeeName.value = '';
-        if (newEmployeePassword) newEmployeePassword.value = '';
-        if (newEmployeePasswordConfirm) newEmployeePasswordConfirm.value = '';
-        
-        this.showLoginType('');
-        this.showLoginScreen();
-    }
-
-    async setStatus(status) {
-        if (!this.currentUser || !this.selectedDateForStatus || this.userRole !== 'employee') return;
-
-        if (status === 'clear') {
-            if (this.planningData[this.currentUser]) {
-                delete this.planningData[this.currentUser][this.selectedDateForStatus];
-            }
-            // Remove from Firebase
-            await this.savePlanningData(this.currentUser, this.selectedDateForStatus, null);
-        } else {
-            if (!this.planningData[this.currentUser]) {
-                this.planningData[this.currentUser] = {};
-            }
-            this.planningData[this.currentUser][this.selectedDateForStatus] = status;
-            
-            // Save to Firebase
-            await this.savePlanningData(this.currentUser, this.selectedDateForStatus, status);
-        }
-
-        this.hideStatusModal();
-        this.renderCalendar();
-        this.updateDashboard(this.currentUser);
-    }
-
-    showTeamOverview() {
-        this.isTeamOverviewMode = true;
-        const teamOverviewModal = document.getElementById('teamOverviewModal');
-        const employeeView = document.getElementById('employeeView');
-        const teamleaderView = document.getElementById('teamleaderView');
-        
-        if (teamOverviewModal) teamOverviewModal.classList.remove('hidden');
-        if (employeeView) employeeView.classList.add('hidden');
-        if (teamleaderView) teamleaderView.classList.add('hidden');
-        
-        this.renderTeamCalendars();
-    }
-
-    hideTeamOverview() {
-        this.isTeamOverviewMode = false;
-        const teamOverviewModal = document.getElementById('teamOverviewModal');
-        const employeeView = document.getElementById('employeeView');
-        const teamleaderView = document.getElementById('teamleaderView');
-        
-        if (teamOverviewModal) teamOverviewModal.classList.add('hidden');
-        
-        if (this.userRole === 'employee') {
-            if (employeeView) employeeView.classList.remove('hidden');
-        } else if (this.userRole === 'teamleader') {
-            if (teamleaderView) teamleaderView.classList.remove('hidden');
-        }
-    }
-
-    renderTeamCalendars() {
-        const container = document.getElementById('teamCalendars');
-        if (!container) return;
-        
-        container.innerHTML = '';
-        
-        this.colleagues.forEach(colleague => {
-            const colleagueDiv = document.createElement('div');
-            colleagueDiv.className = 'colleague-calendar';
-            
-            const stats = this.calculateMonthlyStats(colleague);
-            const rule = this.homeofficeRules[colleague] || 40;
-            
-            const header = document.createElement('h4');
-            header.innerHTML = `
-                ${colleague}
-                ${this.userRole === 'teamleader' ? `<span>HomeOffice: ${stats.homeofficePercent.toFixed(1)}%</span>` : ''}
-            `;
-            colleagueDiv.appendChild(header);
-            
-            if (this.userRole === 'teamleader') {
-                const statsDiv = document.createElement('div');
-                statsDiv.className = 'colleague-stats';
-                statsDiv.innerHTML = `
-                    <span>Regel: ${rule}%</span>
-                    <span>HomeOffice: ${stats.homeofficeDays} Tage</span>
-                    <span>Büro: ${stats.officeDays} Tage</span>
-                    <span>Urlaub: ${stats.vacationDays} Tage</span>
-                    <span class="${stats.homeofficePercent > rule ? 'status-warning' : 'status-ok'}">
-                        ${stats.homeofficePercent > rule ? 'ÜBERSCHREITUNG' : 'OK'}
-                    </span>
-                `;
-                colleagueDiv.appendChild(statsDiv);
-            }
-            
-            const miniCalendar = this.createMiniCalendar(colleague);
-            colleagueDiv.appendChild(miniCalendar);
-            
-            container.appendChild(colleagueDiv);
-        });
-    }
-
-    createMiniCalendar(colleague) {
-        const calendarDiv = document.createElement('div');
-        calendarDiv.className = 'mini-calendar';
-        
-        const year = this.currentDate.getFullYear();
-        const month = this.currentDate.getMonth();
-        
-        const firstDay = new Date(year, month, 1);
-        
-        const grid = document.createElement('div');
-        grid.className = 'calendar__grid';
-        grid.style.fontSize = '12px';
-        
-        ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'].forEach(day => {
-            const header = document.createElement('div');
-            header.className = 'calendar__day-header';
-            header.textContent = day;
-            grid.appendChild(header);
-        });
-        
-        const startDate = new Date(firstDay);
-        const dayOfWeek = (firstDay.getDay() + 6) % 7;
-        startDate.setDate(firstDay.getDate() - dayOfWeek);
-        
-        for (let i = 0; i < 42; i++) {
-            const currentDate = new Date(startDate);
-            currentDate.setDate(startDate.getDate() + i);
-            
-            const dayDiv = document.createElement('div');
-            dayDiv.className = 'calendar__day';
-            dayDiv.style.minHeight = '30px';
-            dayDiv.style.padding = '2px';
-            
-            const isCurrentMonth = currentDate.getMonth() === month;
-            const isWeekend = currentDate.getDay() === 0 || currentDate.getDay() === 6;
-            const dateStr = this.formatDate(currentDate);
-            const holiday = this.getHoliday(dateStr);
-            
-            if (!isCurrentMonth) {
-                dayDiv.classList.add('other-month');
-            }
-            if (isWeekend) {
-                dayDiv.classList.add('weekend');
-            }
-            if (holiday) {
-                dayDiv.classList.add('holiday');
-            }
-            
-            const dayNumber = document.createElement('div');
-            dayNumber.textContent = currentDate.getDate();
-            dayNumber.style.fontSize = '10px';
-            dayDiv.appendChild(dayNumber);
-            
-            if (isCurrentMonth && !holiday && !isWeekend) {
-                const status = this.getStatus(colleague, dateStr);
-                if (status) {
-                    const statusDiv = document.createElement('div');
-                    statusDiv.className = `day-status ${status}`;
-                    statusDiv.style.fontSize = '8px';
-                    statusDiv.textContent = this.statusTypes[status].symbol;
-                    dayDiv.appendChild(statusDiv);
-                }
-            }
-            
-            grid.appendChild(dayDiv);
-        }
-        
-        calendarDiv.appendChild(grid);
-        return calendarDiv;
-    }
-
-    async changePassword() {
-        const oldPasswordInput = document.getElementById('oldPassword');
-        const newPasswordInput = document.getElementById('newPassword');
-        const confirmNewPasswordInput = document.getElementById('confirmNewPassword');
-
-        if (!oldPasswordInput?.value || !newPasswordInput?.value || !confirmNewPasswordInput?.value) {
-            alert('Bitte füllen Sie alle Felder aus.');
-            return;
-        }
-
-        if (newPasswordInput.value !== confirmNewPasswordInput.value) {
-            alert('Die neuen Passwörter stimmen nicht überein.');
-            return;
-        }
-
-        if (newPasswordInput.value.length < 6) {
-            alert('Das neue Passwort muss mindestens 6 Zeichen lang sein.');
-            return;
-        }
-
-        const oldHashedPassword = await this.sha256Hash(oldPasswordInput.value);
-        const currentPassword = this.colleaguePasswords[this.currentUser];
-
-        if (oldHashedPassword !== currentPassword) {
-            alert('Das alte Passwort ist falsch.');
-            return;
-        }
-
-        const newHashedPassword = await this.sha256Hash(newPasswordInput.value);
-        this.colleaguePasswords[this.currentUser] = newHashedPassword;
-        
-        // Save to Firebase
-        await this.saveUserProfile(this.currentUser, {
-            role: 'employee',
-            quota: this.homeofficeRules[this.currentUser],
-            passwordHash: newHashedPassword
-        });
-        
-        this.hideChangePasswordModal();
-        alert('Passwort erfolgreich geändert!');
-    }
-
-    async deleteCurrentUserAccount() {
-        if (!this.currentUser || this.userRole !== 'employee') return;
-
-        const index = this.colleagues.indexOf(this.currentUser);
-        if (index > -1) {
-            this.colleagues.splice(index, 1);
-        }
-
-        delete this.planningData[this.currentUser];
-        delete this.colleaguePasswords[this.currentUser];
-        delete this.homeofficeRules[this.currentUser];
-
-        // Remove from Firebase
-        const uid = this.getUserUID(this.currentUser);
-        await this.removeData(`users/${uid}`);
-        await this.removeData(`plans/${uid}`);
-
-        this.hideDeleteAccountModal();
-        alert('Ihr Konto wurde erfolgreich gelöscht.');
-        this.logout();
-    }
-
-    selectEmployee(employeeName) {
-        const selectedNameSpan = document.getElementById('selectedColleagueName');
-        if (selectedNameSpan) selectedNameSpan.textContent = employeeName;
-        
-        if (!this.planningData[employeeName]) {
-            this.planningData[employeeName] = {};
-        }
-        
-        const homeofficeRule = document.getElementById('homeofficeRule');
-        if (homeofficeRule) {
-            homeofficeRule.value = this.homeofficeRules[employeeName] || 40;
-        }
-        
-        this.renderCalendar();
-        this.updateDashboard(employeeName);
-    }
-
-    navigateMonth(direction) {
-        this.currentDate.setMonth(this.currentDate.getMonth() + direction);
-        this.updateCurrentMonth();
-        this.renderCalendar();
-        
-        if (this.userRole === 'employee' && !this.isTeamOverviewMode) {
-            this.updateDashboard(this.currentUser);
-        } else if (this.userRole === 'teamleader') {
-            if (this.isTeamOverviewMode) {
-                this.renderTeamCalendars();
-            } else if (this.activeTab === 'overview') {
-                this.renderTeamOverview();
-            } else if (this.activeTab === 'reports') {
-                this.generateReportPreview();
-            }
-        }
-    }
-
-    updateCurrentMonth() {
-        const monthNames = [
-            'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
-            'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'
-        ];
-        const currentMonthSpan = document.getElementById('currentMonth');
-        if (currentMonthSpan) {
-            currentMonthSpan.textContent = 
-                `${monthNames[this.currentDate.getMonth()]} ${this.currentDate.getFullYear()}`;
-        }
-    }
-
-    renderCalendar() {
-        if (this.isTeamOverviewMode) {
-            return;
-        }
-
-        const calendar = document.getElementById('calendar');
-        if (!calendar) return;
-        
-        const grid = calendar.querySelector('.calendar__grid');
-        if (!grid) return;
-        
-        const existingDays = grid.querySelectorAll('.calendar__day');
-        existingDays.forEach(day => day.remove());
-
-        const year = this.currentDate.getFullYear();
-        const month = this.currentDate.getMonth();
-        
-        const firstDay = new Date(year, month, 1);
-        const startDate = new Date(firstDay);
-        
-        const dayOfWeek = (firstDay.getDay() + 6) % 7;
-        startDate.setDate(firstDay.getDate() - dayOfWeek);
-
-        const endDate = new Date(startDate);
-        endDate.setDate(startDate.getDate() + 41);
-
-        const currentDate = new Date(startDate);
-
-        while (currentDate <= endDate) {
-            const dayElement = this.createDayElement(currentDate, month);
-            grid.appendChild(dayElement);
-            currentDate.setDate(currentDate.getDate() + 1);
-        }
-    }
-
-    createDayElement(date, currentMonth) {
-        const dayDiv = document.createElement('div');
-        dayDiv.className = 'calendar__day';
-        
-        const dateStr = this.formatDate(date);
-        const isCurrentMonth = date.getMonth() === currentMonth;
-        const isWeekend = date.getDay() === 0 || date.getDay() === 6;
-        const holiday = this.getHoliday(dateStr);
-
-        if (!isCurrentMonth) {
-            dayDiv.classList.add('other-month');
-        }
-        if (isWeekend) {
-            dayDiv.classList.add('weekend');
-        }
-        if (holiday) {
-            dayDiv.classList.add('holiday');
-        }
-
-        const dayNumber = document.createElement('div');
-        dayNumber.className = 'day-number';
-        dayNumber.textContent = date.getDate();
-        dayDiv.appendChild(dayNumber);
-
-        if (holiday) {
-            const holidayName = document.createElement('div');
-            holidayName.className = 'holiday-name';
-            holidayName.textContent = holiday.name;
-            dayDiv.appendChild(holidayName);
-        }
-
-        if (isCurrentMonth && !holiday && !isWeekend) {
-            if (this.userRole === 'employee') {
-                const status = this.getStatus(this.currentUser, dateStr);
-                if (status) {
-                    const statusDiv = document.createElement('div');
-                    statusDiv.className = `day-status ${status}`;
-                    statusDiv.textContent = `${this.statusTypes[status].symbol} ${this.statusTypes[status].name}`;
-                    dayDiv.appendChild(statusDiv);
-                }
-                
-                dayDiv.style.cursor = 'pointer';
-                dayDiv.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    this.showStatusModal(dateStr);
-                });
-            } else if (this.userRole === 'teamleader') {
-                dayDiv.classList.add('readonly');
-                
-                this.colleagues.forEach(colleague => {
-                    const status = this.getStatus(colleague, dateStr);
-                    if (status) {
-                        const statusDiv = document.createElement('div');
-                        statusDiv.className = `day-status ${status}`;
-                        statusDiv.style.fontSize = '9px';
-                        statusDiv.style.marginBottom = '1px';
-                        statusDiv.textContent = `${colleague.substr(0,3)}: ${this.statusTypes[status].symbol}`;
-                        dayDiv.appendChild(statusDiv);
-                    }
-                });
-            }
-        }
-
-        return dayDiv;
-    }
-
-    formatDate(date) {
-        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-    }
-
-    getHoliday(dateStr) {
-        const year = dateStr.split('-')[0];
-        const holidays = this.holidays[year] || [];
-        return holidays.find(h => h.datum === dateStr);
-    }
-
-    getStatus(colleague, date) {
-        return this.planningData[colleague]?.[date];
-    }
-
-    showStatusModal(dateStr) {
-        if (this.userRole !== 'employee') return;
-
-        this.selectedDateForStatus = dateStr;
-        const date = new Date(dateStr);
-        const formattedDate = date.toLocaleDateString('de-DE', {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-        });
-
-        const statusModalDate = document.getElementById('statusModalDate');
-        const statusModal = document.getElementById('statusModal');
-        
-        if (statusModalDate) statusModalDate.textContent = formattedDate;
-        if (statusModal) statusModal.classList.remove('hidden');
-    }
-
-    hideStatusModal() {
-        const statusModal = document.getElementById('statusModal');
-        if (statusModal) statusModal.classList.add('hidden');
-        this.selectedDateForStatus = null;
-    }
-
-    hideAllModals() {
-        document.querySelectorAll('.modal').forEach(modal => {
-            modal.classList.add('hidden');
-        });
-    }
-
-    showChangePasswordModal() {
-        const modal = document.getElementById('changePasswordModal');
-        const oldPasswordInput = document.getElementById('oldPassword');
-        const newPasswordInput = document.getElementById('newPassword');
-        const confirmNewPasswordInput = document.getElementById('confirmNewPassword');
-
-        if (oldPasswordInput) oldPasswordInput.value = '';
-        if (newPasswordInput) newPasswordInput.value = '';
-        if (confirmNewPasswordInput) confirmNewPasswordInput.value = '';
-        
-        if (modal) modal.classList.remove('hidden');
-        if (oldPasswordInput) oldPasswordInput.focus();
-    }
-
-    hideChangePasswordModal() {
-        const modal = document.getElementById('changePasswordModal');
-        if (modal) modal.classList.add('hidden');
-    }
-
-    showDeleteAccountModal() {
-        const modal = document.getElementById('deleteAccountModal');
-        if (modal) modal.classList.remove('hidden');
-    }
-
-    hideDeleteAccountModal() {
-        const modal = document.getElementById('deleteAccountModal');
-        if (modal) modal.classList.add('hidden');
-    }
-
-    updateDashboard(colleague) {
-        if (!colleague) return;
-
-        const stats = this.calculateMonthlyStats(colleague);
-        const rule = this.homeofficeRules[colleague] || 40;
-        
-        const progressFill = document.getElementById('progressFill');
-        const percentSpan = document.getElementById('homeofficePercent');
-        const statTarget = document.getElementById('statTarget');
-        
-        if (progressFill) {
-            progressFill.style.width = `${Math.min(stats.homeofficePercent, 100)}%`;
-            
-            progressFill.className = 'progress-fill';
-            if (stats.homeofficePercent > rule + 10) {
-                progressFill.classList.add('danger');
-            } else if (stats.homeofficePercent > rule) {
-                progressFill.classList.add('warning');
-            }
-        }
-        
-        if (percentSpan) {
-            percentSpan.textContent = `${stats.homeofficePercent.toFixed(1)}%`;
-        }
-
-        if (statTarget) {
-            statTarget.textContent = `Ziel: ≤ ${rule}%`;
-        }
-
-        const workDaysSpan = document.getElementById('workDays');
-        const homeOfficeDaysSpan = document.getElementById('homeOfficeDays');
-        const officeDaysSpan = document.getElementById('officeDays');
-        const vacationDaysSpan = document.getElementById('vacationDays');
-        
-        if (workDaysSpan) workDaysSpan.textContent = stats.totalWorkDays;
-        if (homeOfficeDaysSpan) homeOfficeDaysSpan.textContent = stats.homeofficeDays;
-        if (officeDaysSpan) officeDaysSpan.textContent = stats.officeDays;
-        if (vacationDaysSpan) vacationDaysSpan.textContent = stats.vacationDays;
-
-        const warningMessage = document.getElementById('warningMessage');
-        const warningText = document.getElementById('warningText');
-        if (warningMessage && warningText) {
-            if (stats.homeofficePercent > rule) {
-                warningMessage.style.display = 'block';
-                warningText.textContent = `Die ${rule}%-HomeOffice-Regel wird überschritten!`;
-            } else {
-                warningMessage.style.display = 'none';
-            }
-        }
-    }
-
-    calculateMonthlyStats(colleague) {
-        const year = this.currentDate.getFullYear();
-        const month = this.currentDate.getMonth();
-        
-        let homeofficeDays = 0;
-        let officeDays = 0;
-        let vacationDays = 0;
-        let azDays = 0;
-        let totalWorkDays = 0;
-
-        const firstDay = new Date(year, month, 1);
-        const lastDay = new Date(year, month + 1, 0);
-
-        for (let date = new Date(firstDay); date <= lastDay; date.setDate(date.getDate() + 1)) {
-            const dateStr = this.formatDate(date);
-            const isWeekend = date.getDay() === 0 || date.getDay() === 6;
-            const isHoliday = this.getHoliday(dateStr);
-            
-            if (!isWeekend && !isHoliday) {
-                const status = this.getStatus(colleague, dateStr);
-                
-                if (status === 'urlaub') {
-                    vacationDays++;
-                } else {
-                    totalWorkDays++;
-                    
-                    switch (status) {
-                        case 'homeoffice':
-                            homeofficeDays++;
-                            break;
-                        case 'buero':
-                            officeDays++;
-                            break;
-                        case 'az':
-                            azDays++;
-                            break;
-                    }
-                }
-            }
-        }
-
-        const homeofficePercent = totalWorkDays > 0 ? (homeofficeDays / totalWorkDays) * 100 : 0;
-
-        return {
-            homeofficeDays,
-            officeDays,
-            vacationDays,
-            azDays,
-            totalWorkDays,
-            homeofficePercent
-        };
-    }
-
-    // Additional teamleader methods
-    switchTab(tabName) {
-        this.activeTab = tabName;
-        
-        document.querySelectorAll('.nav-tab').forEach(tab => {
-            tab.classList.toggle('active', tab.dataset.tab === tabName);
-        });
-        
-        document.querySelectorAll('.tab-content').forEach(content => {
-            content.classList.toggle('active', content.id === tabName + 'Tab');
-        });
-        
-        switch(tabName) {
-            case 'overview':
-                this.renderTeamOverview();
-                break;
-            case 'details':
-                this.populateDetailColleagueSelect();
-                break;
-            case 'reports':
-                this.generateReportPreview();
-                break;
-        }
-    }
-
-    populateDetailColleagueSelect() {
-        const select = document.getElementById('detailColleagueSelect');
-        if (!select) return;
-        
-        select.innerHTML = '<option value="">-- Kollege auswählen --</option>';
-        
-        this.colleagues.forEach(colleague => {
-            const option = document.createElement('option');
-            option.value = colleague;
-            option.textContent = colleague;
-            select.appendChild(option);
-        });
-    }
-
-    renderTeamOverview() {
-        const container = document.getElementById('teamOverviewTable');
-        const statusFilter = document.getElementById('statusFilter');
-        if (!container) return;
-        
-        const filterValue = statusFilter ? statusFilter.value : 'all';
-        
-        const table = document.createElement('table');
-        table.className = 'overview-table';
-        
-        table.innerHTML = `
-            <thead>
-                <tr>
-                    <th>Name</th>
-                    <th>HomeOffice-Regel</th>
-                    <th>Aktuelle Quote</th>
-                    <th>Status</th>
-                    <th>HomeOffice Tage</th>
-                    <th>Büro Tage</th>
-                    <th>Urlaub Tage</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        `;
-        
-        const tbody = table.querySelector('tbody');
-        
-        this.colleagues.forEach(colleague => {
-            const stats = this.calculateMonthlyStats(colleague);
-            const rule = this.homeofficeRules[colleague] || 40;
-            
-            if (filterValue === 'violations' && stats.homeofficePercent <= rule) return;
-            if (filterValue === '40' && rule !== 40) return;
-            if (filterValue === '60' && rule !== 60) return;
-            
-            const row = document.createElement('tr');
-            
-            let statusClass = 'status-ok';
-            let statusText = 'OK';
-            
-            if (stats.homeofficePercent > rule) {
-                statusClass = 'status-danger';
-                statusText = 'Überschreitung';
-            }
-            
-            row.innerHTML = `
-                <td><strong>${colleague}</strong></td>
-                <td>${rule}%</td>
-                <td>${stats.homeofficePercent.toFixed(1)}%</td>
-                <td><span class="${statusClass}">${statusText}</span></td>
-                <td>${stats.homeofficeDays}</td>
-                <td>${stats.officeDays}</td>
-                <td>${stats.vacationDays}</td>
-            `;
-            
-            tbody.appendChild(row);
-        });
-        
-        container.innerHTML = '';
-        container.appendChild(table);
-    }
-
-    showColleagueDetail(colleagueName) {
-        const detailContainer = document.getElementById('colleagueDetail');
-        if (!detailContainer || !colleagueName) {
-            if (detailContainer) detailContainer.classList.add('hidden');
-            return;
-        }
-        
-        const stats = this.calculateMonthlyStats(colleagueName);
-        const rule = this.homeofficeRules[colleagueName] || 40;
-        
-        detailContainer.innerHTML = `
-            <h4>${colleagueName} - Detailansicht</h4>
-            <div class="detail-stats">
-                <div class="detail-stat-card">
-                    <h5>HomeOffice Regel</h5>
-                    <div class="stat-value">${rule}%</div>
-                </div>
-                <div class="detail-stat-card">
-                    <h5>HomeOffice Quote</h5>
-                    <div class="stat-value ${stats.homeofficePercent > rule ? 'status-warning' : 'status-ok'}">
-                        ${stats.homeofficePercent.toFixed(1)}%
-                    </div>
-                </div>
-                <div class="detail-stat-card">
-                    <h5>HomeOffice Tage</h5>
-                    <div class="stat-value">${stats.homeofficeDays}</div>
-                </div>
-                <div class="detail-stat-card">
-                    <h5>Büro Tage</h5>
-                    <div class="stat-value">${stats.officeDays}</div>
-                </div>
-                <div class="detail-stat-card">
-                    <h5>Urlaub Tage</h5>
-                    <div class="stat-value">${stats.vacationDays}</div>
-                </div>
-                <div class="detail-stat-card">
-                    <h5>Gesamt Arbeitstage</h5>
-                    <div class="stat-value">${stats.totalWorkDays}</div>
-                </div>
-            </div>
-            <div class="detail-actions">
-                <button class="btn btn--warning btn--sm" onclick="window.planner.showResetPasswordModal('${colleagueName}')">
-                    Passwort zurücksetzen
-                </button>
-                <button class="btn btn--danger btn--sm" onclick="window.planner.showDeleteColleagueModal('${colleagueName}')">
-                    Kollegen löschen
-                </button>
-            </div>
-        `;
-        
-        detailContainer.classList.remove('hidden');
-    }
-
-    showResetPasswordModal(colleague) {
-        this.selectedColleagueForAction = colleague;
-        const modal = document.getElementById('resetPasswordModal');
-        const colleagueSpan = document.getElementById('resetPasswordColleague');
-        
-        if (colleagueSpan) colleagueSpan.textContent = colleague;
-        if (modal) modal.classList.remove('hidden');
-    }
-
-    hideResetPasswordModal() {
-        const modal = document.getElementById('resetPasswordModal');
-        if (modal) modal.classList.add('hidden');
-        this.selectedColleagueForAction = null;
-    }
-
-    async resetColleaguePassword() {
-        if (!this.selectedColleagueForAction) return;
-
-        const newHashedPassword = await this.sha256Hash(this.newPasswordDefault);
-        this.colleaguePasswords[this.selectedColleagueForAction] = newHashedPassword;
-        
-        // Save to Firebase
-        await this.saveUserProfile(this.selectedColleagueForAction, {
-            role: 'employee',
-            quota: this.homeofficeRules[this.selectedColleagueForAction],
-            passwordHash: newHashedPassword
-        });
-        
-        this.hideResetPasswordModal();
-        alert(`Passwort für ${this.selectedColleagueForAction} wurde auf "${this.newPasswordDefault}" zurückgesetzt.`);
-    }
-
-    showDeleteColleagueModal(colleague) {
-        this.selectedColleagueForAction = colleague;
-        const modal = document.getElementById('deleteColleagueModal');
-        const nameSpan = document.getElementById('deleteColleagueName');
-        
-        if (nameSpan) nameSpan.textContent = colleague;
-        if (modal) modal.classList.remove('hidden');
-    }
-
-    hideDeleteColleagueModal() {
-        const modal = document.getElementById('deleteColleagueModal');
-        if (modal) modal.classList.add('hidden');
-        this.selectedColleagueForAction = null;
-    }
-
-    async deleteColleague() {
-        if (!this.selectedColleagueForAction) return;
-
-        const colleague = this.selectedColleagueForAction;
-        
-        const index = this.colleagues.indexOf(colleague);
-        if (index > -1) {
-            this.colleagues.splice(index, 1);
-        }
-
-        delete this.planningData[colleague];
-        delete this.colleaguePasswords[colleague];
-        delete this.homeofficeRules[colleague];
-
-        // Remove from Firebase
-        const uid = this.getUserUID(colleague);
-        await this.removeData(`users/${uid}`);
-        await this.removeData(`plans/${uid}`);
-
-        this.populateDetailColleagueSelect();
-        this.renderTeamOverview();
-        
-        const detailSelect = document.getElementById('detailColleagueSelect');
-        if (detailSelect && detailSelect.value === colleague) {
-            detailSelect.value = '';
-            this.showColleagueDetail('');
-        }
-
-        this.hideDeleteColleagueModal();
-        alert(`Kollege ${colleague} wurde erfolgreich gelöscht.`);
-    }
-
-    generateReportPreview() {
-        const container = document.getElementById('reportPreview');
-        if (!container) return;
-        
-        const monthNames = [
-            'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
-            'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'
-        ];
-        
-        const currentMonth = monthNames[this.currentDate.getMonth()];
-        const currentYear = this.currentDate.getFullYear();
-        
-        let report = `HomeOffice Monatsbericht - ${currentMonth} ${currentYear}\n`;
-        report += `====================================================\n\n`;
-        
-        this.colleagues.forEach(colleague => {
-            const stats = this.calculateMonthlyStats(colleague);
-            const rule = this.homeofficeRules[colleague] || 40;
-            
-            report += `${colleague}:\n`;
-            report += `  HomeOffice-Regel: ${rule}%\n`;
-            report += `  HomeOffice-Quote: ${stats.homeofficePercent.toFixed(1)}%\n`;
-            report += `  HomeOffice Tage: ${stats.homeofficeDays}\n`;
-            report += `  Büro Tage: ${stats.officeDays}\n`;
-            report += `  Urlaub Tage: ${stats.vacationDays}\n`;
-            report += `  Status: ${stats.homeofficePercent > rule ? 'ÜBERSCHREITUNG' : 'OK'}\n\n`;
-        });
-        
-        const totalViolations = this.colleagues.filter(colleague => {
-            const stats = this.calculateMonthlyStats(colleague);
-            const rule = this.homeofficeRules[colleague] || 40;
-            return stats.homeofficePercent > rule;
-        }).length;
-        
-        report += `Zusammenfassung:\n`;
-        report += `- Anzahl Kollegen: ${this.colleagues.length}\n`;
-        report += `- Überschreitungen: ${totalViolations}\n`;
-        report += `- Bericht erstellt: ${new Date().toLocaleString('de-DE')}\n`;
-        
-        container.textContent = report;
-    }
-
-    exportMonthReport() {
-        this.generateReportPreview();
-        const reportContent = document.getElementById('reportPreview').textContent;
-        
-        const blob = new Blob([reportContent], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        
-        const monthNames = [
-            'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
-            'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'
-        ];
-        
-        const fileName = `HomeOffice-Bericht-${monthNames[this.currentDate.getMonth()]}-${this.currentDate.getFullYear()}.txt`;
-        
-        a.href = url;
-        a.download = fileName;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        
-        URL.revokeObjectURL(url);
-    }
+    // Monitor connection status
+    database.ref('.info/connected').on('value', function(snapshot) {
+      isOnline = snapshot.val();
+      console.log('Firebase connection status:', isOnline);
+      updateConnectionStatus();
+    });
+    
+    return true;
+  } catch (error) {
+    console.error('Firebase initialization error:', error);
+    isFirebaseInitialized = false;
+    isOnline = false;
+    updateConnectionStatus();
+    return false;
+  }
 }
 
-// Initialize the application when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOM loaded, initializing Firebase-enabled planner...');
-    window.planner = new HomeOfficePlanner();
-    window.planner.init().catch(error => {
-        console.error('Failed to initialize app:', error);
-    });
+// Initialize application
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('DOM Content Loaded, initializing app...');
+  
+  // Small delay to ensure Firebase SDK is fully loaded
+  setTimeout(() => {
+    initializeApp();
+    setupEventListeners();
+  }, 100);
 });
+
+function setupEventListeners() {
+  console.log('Setting up event listeners...');
+  
+  // Login buttons
+  const employeeLoginBtn = document.getElementById('employeeLoginBtn');
+  const teamLeaderLoginBtn = document.getElementById('teamLeaderLoginBtn');
+  const newEmployeeBtn = document.getElementById('newEmployeeBtn');
+  
+  if (employeeLoginBtn) {
+    employeeLoginBtn.addEventListener('click', showEmployeeLogin);
+  }
+  if (teamLeaderLoginBtn) {
+    teamLeaderLoginBtn.addEventListener('click', showTeamLeaderLogin);
+  }
+  if (newEmployeeBtn) {
+    newEmployeeBtn.addEventListener('click', showNewEmployeeForm);
+  }
+  
+  // Login form submissions
+  const employeeLoginSubmit = document.getElementById('employeeLoginSubmit');
+  const teamLeaderLoginSubmit = document.getElementById('teamLeaderLoginSubmit');
+  const newEmployeeSubmit = document.getElementById('newEmployeeSubmit');
+  
+  if (employeeLoginSubmit) {
+    employeeLoginSubmit.addEventListener('click', loginEmployee);
+  }
+  if (teamLeaderLoginSubmit) {
+    teamLeaderLoginSubmit.addEventListener('click', loginTeamLeader);
+  }
+  if (newEmployeeSubmit) {
+    newEmployeeSubmit.addEventListener('click', registerNewEmployee);
+  }
+  
+  // Main app buttons
+  const logoutBtn = document.getElementById('logoutBtn');
+  const settingsBtn = document.getElementById('settingsBtn');
+  const teamLeaderNav = document.getElementById('teamLeaderNav');
+  
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', logout);
+  }
+  if (settingsBtn) {
+    settingsBtn.addEventListener('click', showSettingsModal);
+  }
+  if (teamLeaderNav) {
+    teamLeaderNav.addEventListener('click', showTeamOverview);
+  }
+  
+  // Calendar navigation
+  const prevMonthBtn = document.getElementById('prevMonthBtn');
+  const nextMonthBtn = document.getElementById('nextMonthBtn');
+  
+  if (prevMonthBtn) {
+    prevMonthBtn.addEventListener('click', previousMonth);
+  }
+  if (nextMonthBtn) {
+    nextMonthBtn.addEventListener('click', nextMonth);
+  }
+  
+  // Settings buttons
+  const changePasswordBtn = document.getElementById('changePasswordBtn');
+  const updateQuotaBtn = document.getElementById('updateQuotaBtn');
+  const deleteAccountBtn = document.getElementById('deleteAccountBtn');
+  
+  if (changePasswordBtn) {
+    changePasswordBtn.addEventListener('click', changePassword);
+  }
+  if (updateQuotaBtn) {
+    updateQuotaBtn.addEventListener('click', updateQuotaSettings);
+  }
+  if (deleteAccountBtn) {
+    deleteAccountBtn.addEventListener('click', confirmAccountDeletion);
+  }
+  
+  // Report buttons
+  const generateReportBtn = document.getElementById('generateReportBtn');
+  const exportDataBtn = document.getElementById('exportDataBtn');
+  
+  if (generateReportBtn) {
+    generateReportBtn.addEventListener('click', generateReport);
+  }
+  if (exportDataBtn) {
+    exportDataBtn.addEventListener('click', exportData);
+  }
+  
+  // Modal close buttons
+  const modalCloseButtons = document.querySelectorAll('.modal-close');
+  modalCloseButtons.forEach(button => {
+    button.addEventListener('click', function() {
+      const modalId = this.getAttribute('data-modal');
+      if (modalId) {
+        closeModal(modalId);
+      }
+    });
+  });
+  
+  // Status buttons
+  const statusButtons = document.querySelectorAll('.status-button');
+  statusButtons.forEach(button => {
+    button.addEventListener('click', function() {
+      const status = this.getAttribute('data-status');
+      if (status === 'remove') {
+        removeDayStatus();
+      } else {
+        setDayStatus(status);
+      }
+    });
+  });
+  
+  // Tab buttons
+  const tabButtons = document.querySelectorAll('.tab-button');
+  tabButtons.forEach(button => {
+    button.addEventListener('click', function() {
+      const tabName = this.getAttribute('data-tab');
+      showTab(tabName, this);
+    });
+  });
+  
+  // Enter key handlers for password fields
+  const employeePassword = document.getElementById('employeePassword');
+  if (employeePassword) {
+    employeePassword.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        loginEmployee();
+      }
+    });
+  }
+  
+  const teamLeaderPassword = document.getElementById('teamLeaderPassword');
+  if (teamLeaderPassword) {
+    teamLeaderPassword.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        loginTeamLeader();
+      }
+    });
+  }
+  
+  console.log('Event listeners setup completed');
+}
+
+async function initializeApp() {
+  showLoading(true);
+  
+  try {
+    // Initialize Firebase first
+    const firebaseReady = initializeFirebase();
+    
+    if (firebaseReady) {
+      console.log('Firebase initialized successfully');
+      // Initialize default users
+      await initializeDefaultUsers();
+    } else {
+      console.warn('Firebase initialization failed, running in offline mode');
+    }
+    
+  } catch (error) {
+    console.error('App initialization error:', error);
+  } finally {
+    showLoading(false);
+  }
+}
+
+async function initializeDefaultUsers() {
+  if (!isFirebaseInitialized) {
+    console.log('Firebase not initialized, skipping user initialization');
+    return;
+  }
+  
+  try {
+    console.log('Initializing default users...');
+    const defaultPasswordHash = await hashPassword('password123');
+    const teamLeaderPasswordHash = await hashPassword('teamleiter123');
+    
+    console.log('Default password hash:', defaultPasswordHash.substring(0, 10) + '...');
+    
+    // Check if users exist, if not create them
+    for (const userName of defaultUsers) {
+      const userRef = database.ref(`users/${userName.toLowerCase()}`);
+      
+      try {
+        const snapshot = await userRef.once('value');
+        
+        if (!snapshot.exists()) {
+          console.log(`Creating user: ${userName}`);
+          await userRef.set({
+            profile: {
+              name: userName,
+              role: 'employee',
+              quota: 40,
+              passwordHash: defaultPasswordHash,
+              lastUpdated: firebase.database.ServerValue.TIMESTAMP
+            }
+          });
+          console.log(`User ${userName} created successfully`);
+        } else {
+          console.log(`User ${userName} already exists`);
+        }
+      } catch (error) {
+        console.error(`Error creating user ${userName}:`, error);
+      }
+    }
+    
+    // Initialize team leader account
+    const teamLeaderRef = database.ref('users/teamleiter');
+    try {
+      const teamLeaderSnapshot = await teamLeaderRef.once('value');
+      
+      if (!teamLeaderSnapshot.exists()) {
+        console.log('Creating teamleiter account...');
+        await teamLeaderRef.set({
+          profile: {
+            name: 'Teamleiter',
+            role: 'teamleader',
+            quota: 100,
+            passwordHash: teamLeaderPasswordHash,
+            lastUpdated: firebase.database.ServerValue.TIMESTAMP
+          }
+        });
+        console.log('Teamleiter account created successfully');
+      } else {
+        console.log('Teamleiter account already exists');
+      }
+    } catch (error) {
+      console.error('Error creating teamleiter account:', error);
+    }
+    
+    console.log('Default users initialization completed');
+    
+  } catch (error) {
+    console.error('Error initializing default users:', error);
+  }
+}
+
+// Login Functions
+function showEmployeeLogin() {
+  console.log('Showing employee login modal');
+  document.getElementById('employeeLoginModal').classList.remove('hidden');
+  // Clear previous error messages
+  const errorElement = document.getElementById('employeeLoginError');
+  if (errorElement) {
+    errorElement.classList.add('hidden');
+  }
+}
+
+function showTeamLeaderLogin() {
+  console.log('Showing team leader login modal');
+  document.getElementById('teamLeaderLoginModal').classList.remove('hidden');
+  // Clear previous error messages
+  const errorElement = document.getElementById('teamLeaderLoginError');
+  if (errorElement) {
+    errorElement.classList.add('hidden');
+  }
+}
+
+function showNewEmployeeForm() {
+  console.log('Showing new employee form modal');
+  document.getElementById('newEmployeeModal').classList.remove('hidden');
+  // Clear previous error messages
+  const errorElement = document.getElementById('newEmployeeError');
+  if (errorElement) {
+    errorElement.classList.add('hidden');
+  }
+}
+
+async function loginEmployee() {
+  console.log('Employee login attempt started...');
+  
+  const name = document.getElementById('employeeName').value;
+  const password = document.getElementById('employeePassword').value;
+  const errorElement = document.getElementById('employeeLoginError');
+  
+  console.log('Login attempt for user:', name);
+  
+  if (!name || !password) {
+    showError(errorElement, 'Bitte wählen Sie einen Namen und geben Sie das Passwort ein.');
+    return;
+  }
+  
+  if (!isFirebaseInitialized) {
+    showError(errorElement, 'Verbindung zur Datenbank fehlgeschlagen. Bitte versuchen Sie es später erneut.');
+    return;
+  }
+  
+  try {
+    showLoading(true);
+    console.log('Hashing password...');
+    const passwordHash = await hashPassword(password);
+    console.log('Password hash generated:', passwordHash.substring(0, 10) + '...');
+    
+    const userRef = database.ref(`users/${name.toLowerCase()}`);
+    console.log('Fetching user data from:', `users/${name.toLowerCase()}`);
+    
+    const snapshot = await userRef.once('value');
+    console.log('User snapshot exists:', snapshot.exists());
+    
+    if (snapshot.exists()) {
+      const userData = snapshot.val();
+      console.log('User data retrieved:', userData);
+      
+      if (userData.profile && userData.profile.passwordHash) {
+        console.log('Stored hash:', userData.profile.passwordHash.substring(0, 10) + '...');
+        console.log('Input hash:', passwordHash.substring(0, 10) + '...');
+        
+        if (userData.profile.passwordHash === passwordHash) {
+          console.log('Password match successful!');
+          
+          currentUser = {
+            id: name.toLowerCase(),
+            name: userData.profile.name,
+            role: userData.profile.role,
+            quota: userData.profile.quota
+          };
+          
+          console.log('User logged in:', currentUser);
+          
+          closeModal('employeeLoginModal');
+          showMainApp();
+        } else {
+          console.log('Password mismatch');
+          showError(errorElement, 'Falsches Passwort.');
+        }
+      } else {
+        console.log('User profile data incomplete');
+        showError(errorElement, 'Benutzerdaten sind unvollständig.');
+      }
+    } else {
+      console.log('User not found in database');
+      showError(errorElement, 'Benutzer nicht gefunden.');
+    }
+  } catch (error) {
+    console.error('Login error:', error);
+    showError(errorElement, 'Anmeldefehler: ' + error.message);
+  } finally {
+    showLoading(false);
+  }
+}
+
+async function loginTeamLeader() {
+  console.log('Team leader login attempt started...');
+  
+  const password = document.getElementById('teamLeaderPassword').value;
+  const errorElement = document.getElementById('teamLeaderLoginError');
+  
+  if (!password) {
+    showError(errorElement, 'Bitte geben Sie das Teamleiter-Passwort ein.');
+    return;
+  }
+  
+  if (!isFirebaseInitialized) {
+    showError(errorElement, 'Verbindung zur Datenbank fehlgeschlagen. Bitte versuchen Sie es später erneut.');
+    return;
+  }
+  
+  try {
+    showLoading(true);
+    const passwordHash = await hashPassword(password);
+    const userRef = database.ref('users/teamleiter');
+    const snapshot = await userRef.once('value');
+    
+    if (snapshot.exists()) {
+      const userData = snapshot.val();
+      if (userData.profile && userData.profile.passwordHash === passwordHash) {
+        currentUser = {
+          id: 'teamleiter',
+          name: 'Teamleiter',
+          role: 'teamleader',
+          quota: 100
+        };
+        
+        closeModal('teamLeaderLoginModal');
+        showMainApp();
+      } else {
+        showError(errorElement, 'Falsches Teamleiter-Passwort.');
+      }
+    } else {
+      showError(errorElement, 'Teamleiter-Account nicht gefunden.');
+    }
+  } catch (error) {
+    console.error('Team leader login error:', error);
+    showError(errorElement, 'Anmeldefehler: ' + error.message);
+  } finally {
+    showLoading(false);
+  }
+}
+
+async function registerNewEmployee() {
+  const name = document.getElementById('newEmployeeName').value.trim();
+  const password = document.getElementById('newEmployeePassword').value;
+  const confirmPassword = document.getElementById('newEmployeePasswordConfirm').value;
+  const errorElement = document.getElementById('newEmployeeError');
+  
+  if (!name || !password || !confirmPassword) {
+    showError(errorElement, 'Bitte füllen Sie alle Felder aus.');
+    return;
+  }
+  
+  if (password !== confirmPassword) {
+    showError(errorElement, 'Passwörter stimmen nicht überein.');
+    return;
+  }
+  
+  if (password.length < 6) {
+    showError(errorElement, 'Passwort muss mindestens 6 Zeichen lang sein.');
+    return;
+  }
+  
+  if (!isFirebaseInitialized) {
+    showError(errorElement, 'Verbindung zur Datenbank fehlgeschlagen. Bitte versuchen Sie es später erneut.');
+    return;
+  }
+  
+  try {
+    showLoading(true);
+    const userId = name.toLowerCase().replace(/\s+/g, '_');
+    const userRef = database.ref(`users/${userId}`);
+    const snapshot = await userRef.once('value');
+    
+    if (snapshot.exists()) {
+      showError(errorElement, 'Ein Benutzer mit diesem Namen existiert bereits.');
+      return;
+    }
+    
+    const passwordHash = await hashPassword(password);
+    
+    await userRef.set({
+      profile: {
+        name: name,
+        role: 'employee',
+        quota: 40,
+        passwordHash: passwordHash,
+        lastUpdated: firebase.database.ServerValue.TIMESTAMP
+      }
+    });
+    
+    currentUser = {
+      id: userId,
+      name: name,
+      role: 'employee',
+      quota: 40
+    };
+    
+    closeModal('newEmployeeModal');
+    showMainApp();
+    
+  } catch (error) {
+    console.error('Registration error:', error);
+    showError(errorElement, 'Registrierungsfehler: ' + error.message);
+  } finally {
+    showLoading(false);
+  }
+}
+
+// Main App Functions
+function showMainApp() {
+  console.log('Showing main app for user:', currentUser);
+  
+  document.getElementById('loginScreen').classList.add('hidden');
+  document.getElementById('mainApp').classList.remove('hidden');
+  
+  // Update welcome message
+  document.getElementById('userWelcome').textContent = `Willkommen, ${currentUser.name}`;
+  
+  // Show team leader navigation if applicable
+  if (currentUser.role === 'teamleader') {
+    document.getElementById('teamLeaderNav').classList.remove('hidden');
+    document.getElementById('teamLeaderNavigation').classList.remove('hidden');
+    document.getElementById('teamLeaderSettings').classList.remove('hidden');
+  }
+  
+  // Initialize calendar
+  updateCalendar();
+  loadUserData();
+}
+
+function logout() {
+  console.log('Logging out user:', currentUser);
+  
+  currentUser = null;
+  document.getElementById('mainApp').classList.add('hidden');
+  document.getElementById('loginScreen').classList.remove('hidden');
+  
+  // Hide team leader elements
+  document.getElementById('teamLeaderNav').classList.add('hidden');
+  document.getElementById('teamLeaderNavigation').classList.add('hidden');
+  document.getElementById('teamOverviewPanel').classList.add('hidden');
+  
+  // Clear forms
+  document.getElementById('employeeName').value = '';
+  document.getElementById('employeePassword').value = '';
+  document.getElementById('teamLeaderPassword').value = '';
+  document.getElementById('newEmployeeName').value = '';
+  document.getElementById('newEmployeePassword').value = '';
+  document.getElementById('newEmployeePasswordConfirm').value = '';
+  
+  // Clear error messages
+  const errorElements = document.querySelectorAll('.error-message');
+  errorElements.forEach(element => {
+    element.classList.add('hidden');
+    element.textContent = '';
+  });
+}
+
+// Calendar Functions
+function updateCalendar() {
+  const monthNames = [
+    'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
+    'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'
+  ];
+  
+  document.getElementById('currentMonth').textContent = `${monthNames[currentMonth]} ${currentYear}`;
+  
+  generateCalendarDays();
+}
+
+function generateCalendarDays() {
+  const calendarGrid = document.querySelector('.calendar-grid');
+  const dayHeaders = calendarGrid.querySelectorAll('.calendar-day-header');
+  
+  // Remove existing day elements but keep headers
+  const existingDays = calendarGrid.querySelectorAll('.calendar-day');
+  existingDays.forEach(day => day.remove());
+  
+  const firstDay = new Date(currentYear, currentMonth, 1);
+  const lastDay = new Date(currentYear, currentMonth + 1, 0);
+  const firstDayOfWeek = (firstDay.getDay() + 6) % 7; // Adjust for Monday start
+  const daysInMonth = lastDay.getDate();
+  
+  const today = new Date();
+  const todayString = today.toISOString().split('T')[0];
+  
+  // Add empty cells for days before the first day of the month
+  for (let i = 0; i < firstDayOfWeek; i++) {
+    const prevDate = new Date(currentYear, currentMonth, -firstDayOfWeek + i + 1);
+    const dayElement = createDayElement(prevDate, true);
+    calendarGrid.appendChild(dayElement);
+  }
+  
+  // Add days of the current month
+  for (let day = 1; day <= daysInMonth; day++) {
+    const date = new Date(currentYear, currentMonth, day);
+    const dayElement = createDayElement(date, false);
+    calendarGrid.appendChild(dayElement);
+  }
+  
+  // Add empty cells to complete the grid
+  const totalCells = calendarGrid.children.length - 7; // Exclude headers
+  const remainingCells = 42 - totalCells; // 6 rows × 7 days
+  
+  for (let i = 1; i <= remainingCells; i++) {
+    const nextDate = new Date(currentYear, currentMonth + 1, i);
+    const dayElement = createDayElement(nextDate, true);
+    calendarGrid.appendChild(dayElement);
+  }
+}
+
+function createDayElement(date, isOtherMonth) {
+  const dayElement = document.createElement('div');
+  dayElement.className = 'calendar-day';
+  
+  const dateString = date.toISOString().split('T')[0];
+  const dayNumber = date.getDate();
+  const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+  const isToday = dateString === new Date().toISOString().split('T')[0];
+  const isHoliday = isGermanHoliday(dateString);
+  
+  // Add classes
+  if (isOtherMonth) {
+    dayElement.classList.add('other-month');
+  }
+  if (isWeekend) {
+    dayElement.classList.add('weekend');
+  }
+  if (isToday) {
+    dayElement.classList.add('today');
+  }
+  if (isHoliday) {
+    dayElement.classList.add('holiday');
+  }
+  
+  // Day number
+  const dayNumberElement = document.createElement('div');
+  dayNumberElement.className = 'day-number';
+  dayNumberElement.textContent = dayNumber;
+  dayElement.appendChild(dayNumberElement);
+  
+  // Holiday name
+  if (isHoliday) {
+    const holidayElement = document.createElement('div');
+    holidayElement.className = 'day-holiday';
+    holidayElement.textContent = getHolidayName(dateString);
+    dayElement.appendChild(holidayElement);
+  }
+  
+  // Status display
+  const statusElement = document.createElement('div');
+  statusElement.className = 'day-status';
+  dayElement.appendChild(statusElement);
+  
+  // Add click handler for weekdays only
+  if (!isWeekend && !isHoliday && !isOtherMonth) {
+    dayElement.addEventListener('click', () => openStatusModal(dateString));
+    dayElement.style.cursor = 'pointer';
+  } else {
+    dayElement.style.cursor = 'default';
+  }
+  
+  return dayElement;
+}
+
+function isGermanHoliday(dateString) {
+  const year = parseInt(dateString.split('-')[0]);
+  const yearHolidays = holidays[year] || [];
+  return yearHolidays.some(holiday => holiday.datum === dateString);
+}
+
+function getHolidayName(dateString) {
+  const year = parseInt(dateString.split('-')[0]);
+  const yearHolidays = holidays[year] || [];
+  const holiday = yearHolidays.find(holiday => holiday.datum === dateString);
+  return holiday ? holiday.name : '';
+}
+
+function previousMonth() {
+  currentMonth--;
+  if (currentMonth < 0) {
+    currentMonth = 11;
+    currentYear--;
+  }
+  updateCalendar();
+  loadUserData();
+}
+
+function nextMonth() {
+  currentMonth++;
+  if (currentMonth > 11) {
+    currentMonth = 0;
+    currentYear++;
+  }
+  updateCalendar();
+  loadUserData();
+}
+
+// Status Management
+function openStatusModal(dateString) {
+  selectedDateForStatus = dateString;
+  document.getElementById('selectedDate').textContent = formatDate(dateString);
+  document.getElementById('statusModal').classList.remove('hidden');
+}
+
+async function setDayStatus(status) {
+  if (!selectedDateForStatus || !currentUser) return;
+  
+  try {
+    const [year, month] = selectedDateForStatus.split('-');
+    const monthKey = `${year}-${month}`;
+    const dayKey = selectedDateForStatus;
+    
+    if (isOnline && isFirebaseInitialized) {
+      await database.ref(`plans/${currentUser.id}/${monthKey}/${dayKey}`).set(status);
+    } else {
+      // Store locally for offline mode
+      if (!localData[currentUser.id]) localData[currentUser.id] = {};
+      if (!localData[currentUser.id][monthKey]) localData[currentUser.id][monthKey] = {};
+      localData[currentUser.id][monthKey][dayKey] = status;
+    }
+    
+    closeModal('statusModal');
+    updateCalendarDay(selectedDateForStatus, status);
+    
+    if (currentUser.role === 'teamleader') {
+      updateTeamOverview();
+    }
+    
+  } catch (error) {
+    console.error('Error setting day status:', error);
+    alert('Fehler beim Speichern des Status. Bitte versuchen Sie es erneut.');
+  }
+}
+
+async function removeDayStatus() {
+  if (!selectedDateForStatus || !currentUser) return;
+  
+  try {
+    const [year, month] = selectedDateForStatus.split('-');
+    const monthKey = `${year}-${month}`;
+    const dayKey = selectedDateForStatus;
+    
+    if (isOnline && isFirebaseInitialized) {
+      await database.ref(`plans/${currentUser.id}/${monthKey}/${dayKey}`).remove();
+    } else {
+      // Remove locally for offline mode
+      if (localData[currentUser.id] && localData[currentUser.id][monthKey]) {
+        delete localData[currentUser.id][monthKey][dayKey];
+      }
+    }
+    
+    closeModal('statusModal');
+    updateCalendarDay(selectedDateForStatus, null);
+    
+    if (currentUser.role === 'teamleader') {
+      updateTeamOverview();
+    }
+    
+  } catch (error) {
+    console.error('Error removing day status:', error);
+    alert('Fehler beim Entfernen des Status. Bitte versuchen Sie es erneut.');
+  }
+}
+
+function updateCalendarDay(dateString, status) {
+  const dayElements = document.querySelectorAll('.calendar-day');
+  
+  dayElements.forEach(dayElement => {
+    const dayNumber = parseInt(dayElement.querySelector('.day-number').textContent);
+    const elementDate = new Date(currentYear, currentMonth, dayNumber);
+    const elementDateString = elementDate.toISOString().split('T')[0];
+    
+    if (elementDateString === dateString) {
+      const statusElement = dayElement.querySelector('.day-status');
+      statusElement.className = 'day-status';
+      statusElement.textContent = '';
+      
+      if (status && statusTypes[status]) {
+        statusElement.classList.add(status);
+        statusElement.textContent = statusTypes[status].symbol;
+      }
+    }
+  });
+}
+
+async function loadUserData() {
+  if (!currentUser) return;
+  
+  try {
+    const monthKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+    
+    let monthData = {};
+    
+    if (isOnline && isFirebaseInitialized) {
+      const snapshot = await database.ref(`plans/${currentUser.id}/${monthKey}`).once('value');
+      monthData = snapshot.val() || {};
+    } else {
+      // Load from local data
+      if (localData[currentUser.id] && localData[currentUser.id][monthKey]) {
+        monthData = localData[currentUser.id][monthKey];
+      }
+    }
+    
+    // Update calendar with loaded data
+    Object.keys(monthData).forEach(dateString => {
+      updateCalendarDay(dateString, monthData[dateString]);
+    });
+    
+  } catch (error) {
+    console.error('Error loading user data:', error);
+  }
+}
+
+// Team Leader Functions
+function showTeamOverview() {
+  document.getElementById('calendarView').classList.add('hidden');
+  document.getElementById('teamOverviewPanel').classList.remove('hidden');
+  updateTeamOverview();
+}
+
+function showTab(tabName, buttonElement) {
+  // Hide all tabs
+  document.querySelectorAll('.tab-content').forEach(tab => {
+    tab.classList.remove('active');
+  });
+  
+  // Remove active from all buttons
+  document.querySelectorAll('.tab-button').forEach(button => {
+    button.classList.remove('active');
+  });
+  
+  // Show selected tab
+  document.getElementById(`${tabName}Tab`).classList.add('active');
+  
+  // Activate button
+  if (buttonElement) {
+    buttonElement.classList.add('active');
+  }
+  
+  if (tabName === 'overview') {
+    updateTeamOverview();
+  } else if (tabName === 'details') {
+    loadEmployeeDetails();
+  } else if (tabName === 'reports') {
+    initializeReports();
+  }
+}
+
+async function updateTeamOverview() {
+  if (!isOnline || !isFirebaseInitialized) {
+    document.getElementById('teamStatistics').innerHTML = '<p>Team-Übersicht ist nur online verfügbar.</p>';
+    return;
+  }
+  
+  try {
+    const usersSnapshot = await database.ref('users').once('value');
+    const users = usersSnapshot.val() || {};
+    
+    const plansSnapshot = await database.ref('plans').once('value');
+    const plans = plansSnapshot.val() || {};
+    
+    const today = new Date().toISOString().split('T')[0];
+    const todayStatus = {};
+    
+    // Get today's status for all users
+    Object.keys(users).forEach(userId => {
+      if (users[userId].profile && users[userId].profile.role === 'employee') {
+        const [year, month] = today.split('-');
+        const monthKey = `${year}-${month}`;
+        
+        if (plans[userId] && plans[userId][monthKey] && plans[userId][monthKey][today]) {
+          todayStatus[userId] = plans[userId][monthKey][today];
+        } else {
+          todayStatus[userId] = 'buero'; // Default to office
+        }
+      }
+    });
+    
+    // Display team statistics
+    displayTeamStatistics(users, plans);
+    displayTodayTeamStatus(users, todayStatus);
+    
+  } catch (error) {
+    console.error('Error updating team overview:', error);
+  }
+}
+
+function displayTeamStatistics(users, plans) {
+  const employees = Object.keys(users).filter(userId => 
+    users[userId].profile && users[userId].profile.role === 'employee'
+  );
+  
+  const totalEmployees = employees.length;
+  const currentMonth = new Date().getMonth() + 1;
+  const currentYear = new Date().getFullYear();
+  const monthKey = `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
+  
+  let totalHomeOfficeDays = 0;
+  let totalWorkDays = 0;
+  
+  employees.forEach(userId => {
+    if (plans[userId] && plans[userId][monthKey]) {
+      const monthPlans = plans[userId][monthKey];
+      Object.keys(monthPlans).forEach(date => {
+        totalWorkDays++;
+        if (monthPlans[date] === 'homeoffice') {
+          totalHomeOfficeDays++;
+        }
+      });
+    }
+  });
+  
+  const homeOfficePercentage = totalWorkDays > 0 ? 
+    Math.round((totalHomeOfficeDays / totalWorkDays) * 100) : 0;
+  
+  const statisticsHTML = `
+    <div class="stat-grid">
+      <div class="stat-item">
+        <h4>Gesamt Mitarbeiter</h4>
+        <p class="stat-number">${totalEmployees}</p>
+      </div>
+      <div class="stat-item">
+        <h4>Home-Office Quote (aktueller Monat)</h4>
+        <p class="stat-number">${homeOfficePercentage}%</p>
+      </div>
+      <div class="stat-item">
+        <h4>Geplante Arbeitstage</h4>
+        <p class="stat-number">${totalWorkDays}</p>
+      </div>
+      <div class="stat-item">
+        <h4>Home-Office Tage</h4>
+        <p class="stat-number">${totalHomeOfficeDays}</p>
+      </div>
+    </div>
+  `;
+  
+  document.getElementById('teamStatistics').innerHTML = statisticsHTML;
+}
+
+function displayTodayTeamStatus(users, todayStatus) {
+  const employees = Object.keys(users).filter(userId => 
+    users[userId].profile && users[userId].profile.role === 'employee'
+  );
+  
+  const statusHTML = employees.map(userId => {
+    const user = users[userId];
+    const status = todayStatus[userId] || 'buero';
+    const statusInfo = statusTypes[status];
+    
+    return `
+      <div class="team-member-card">
+        <div class="member-info">
+          <div class="member-status" style="background-color: ${statusInfo.color};">
+            ${statusInfo.symbol}
+          </div>
+          <div>
+            <strong>${user.profile.name}</strong>
+            <div class="member-status-text">${statusInfo.name}</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+  
+  document.getElementById('todayTeamStatus').innerHTML = statusHTML;
+}
+
+async function loadEmployeeDetails() {
+  if (!isOnline || !isFirebaseInitialized) {
+    document.getElementById('employeeDetails').innerHTML = '<p>Mitarbeiter-Details sind nur online verfügbar.</p>';
+    return;
+  }
+  
+  try {
+    const usersSnapshot = await database.ref('users').once('value');
+    const users = usersSnapshot.val() || {};
+    
+    const employees = Object.keys(users).filter(userId => 
+      users[userId].profile && users[userId].profile.role === 'employee'
+    );
+    
+    const detailsHTML = employees.map(userId => {
+      const user = users[userId];
+      return `
+        <div class="employee-detail-card card">
+          <div class="card__body">
+            <h4>${user.profile.name}</h4>
+            <p><strong>Quote:</strong> ${user.profile.quota}%</p>
+            <p><strong>Rolle:</strong> ${user.profile.role}</p>
+            <div class="employee-actions">
+              <button type="button" class="btn btn--sm btn--outline" onclick="resetEmployeePassword('${userId}')">
+                Passwort zurücksetzen
+              </button>
+              <button type="button" class="btn btn--sm btn--error" onclick="deleteEmployee('${userId}')">
+                Account löschen
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+    
+    document.getElementById('employeeDetails').innerHTML = detailsHTML;
+    
+  } catch (error) {
+    console.error('Error loading employee details:', error);
+  }
+}
+
+async function resetEmployeePassword(userId) {
+  if (!confirm('Möchten Sie das Passwort für diesen Mitarbeiter wirklich zurücksetzen?')) {
+    return;
+  }
+  
+  try {
+    const defaultPasswordHash = await hashPassword('password123');
+    await database.ref(`users/${userId}/profile/passwordHash`).set(defaultPasswordHash);
+    alert('Passwort wurde auf "password123" zurückgesetzt.');
+  } catch (error) {
+    console.error('Error resetting password:', error);
+    alert('Fehler beim Zurücksetzen des Passworts.');
+  }
+}
+
+async function deleteEmployee(userId) {
+  if (!confirm('Möchten Sie diesen Mitarbeiter-Account wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.')) {
+    return;
+  }
+  
+  try {
+    await database.ref(`users/${userId}`).remove();
+    await database.ref(`plans/${userId}`).remove();
+    alert('Mitarbeiter-Account wurde gelöscht.');
+    loadEmployeeDetails();
+  } catch (error) {
+    console.error('Error deleting employee:', error);
+    alert('Fehler beim Löschen des Accounts.');
+  }
+}
+
+function initializeReports() {
+  const reportMonth = document.getElementById('reportMonth');
+  reportMonth.innerHTML = '';
+  
+  // Populate months for current year
+  const currentYear = new Date().getFullYear();
+  const monthNames = [
+    'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
+    'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'
+  ];
+  
+  monthNames.forEach((month, index) => {
+    const option = document.createElement('option');
+    option.value = `${currentYear}-${String(index + 1).padStart(2, '0')}`;
+    option.textContent = `${month} ${currentYear}`;
+    reportMonth.appendChild(option);
+  });
+  
+  // Set current month as default
+  const currentMonth = new Date().getMonth();
+  reportMonth.value = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+}
+
+async function generateReport() {
+  const selectedMonth = document.getElementById('reportMonth').value;
+  
+  if (!isOnline || !isFirebaseInitialized) {
+    document.getElementById('reportResults').innerHTML = '<p>Berichte sind nur online verfügbar.</p>';
+    return;
+  }
+  
+  try {
+    showLoading(true);
+    
+    const usersSnapshot = await database.ref('users').once('value');
+    const users = usersSnapshot.val() || {};
+    
+    const plansSnapshot = await database.ref('plans').once('value');
+    const plans = plansSnapshot.val() || {};
+    
+    const employees = Object.keys(users).filter(userId => 
+      users[userId].profile && users[userId].profile.role === 'employee'
+    );
+    
+    let reportHTML = `<h4>Bericht für ${selectedMonth}</h4>`;
+    reportHTML += '<div class="report-table">';
+    
+    employees.forEach(userId => {
+      const user = users[userId];
+      const monthPlans = plans[userId] && plans[userId][selectedMonth] ? plans[userId][selectedMonth] : {};
+      
+      const statusCounts = {
+        homeoffice: 0,
+        buero: 0,
+        urlaub: 0,
+        az: 0
+      };
+      
+      Object.values(monthPlans).forEach(status => {
+        if (statusCounts.hasOwnProperty(status)) {
+          statusCounts[status]++;
+        }
+      });
+      
+      const totalDays = Object.keys(monthPlans).length;
+      const homeOfficePercentage = totalDays > 0 ? 
+        Math.round((statusCounts.homeoffice / totalDays) * 100) : 0;
+      
+      reportHTML += `
+        <div class="report-employee">
+          <h5>${user.profile.name}</h5>
+          <p>Home-Office: ${statusCounts.homeoffice} Tage (${homeOfficePercentage}%)</p>
+          <p>Büro: ${statusCounts.buero} Tage</p>
+          <p>Urlaub: ${statusCounts.urlaub} Tage</p>
+          <p>AZ: ${statusCounts.az} Tage</p>
+        </div>
+      `;
+    });
+    
+    reportHTML += '</div>';
+    document.getElementById('reportResults').innerHTML = reportHTML;
+    
+  } catch (error) {
+    console.error('Error generating report:', error);
+    document.getElementById('reportResults').innerHTML = '<p>Fehler beim Erstellen des Berichts.</p>';
+  } finally {
+    showLoading(false);
+  }
+}
+
+function exportData() {
+  alert('Export-Funktionalität wird implementiert...');
+}
+
+// Settings Functions
+function showSettingsModal() {
+  document.getElementById('settingsModal').classList.remove('hidden');
+}
+
+async function changePassword() {
+  const currentPassword = document.getElementById('currentPassword').value;
+  const newPassword = document.getElementById('newPassword').value;
+  const confirmPassword = document.getElementById('confirmPassword').value;
+  
+  if (!currentPassword || !newPassword || !confirmPassword) {
+    alert('Bitte füllen Sie alle Felder aus.');
+    return;
+  }
+  
+  if (newPassword !== confirmPassword) {
+    alert('Neue Passwörter stimmen nicht überein.');
+    return;
+  }
+  
+  if (newPassword.length < 6) {
+    alert('Neues Passwort muss mindestens 6 Zeichen lang sein.');
+    return;
+  }
+  
+  try {
+    const currentPasswordHash = await hashPassword(currentPassword);
+    const userRef = database.ref(`users/${currentUser.id}`);
+    const snapshot = await userRef.once('value');
+    
+    if (snapshot.exists()) {
+      const userData = snapshot.val();
+      if (userData.profile.passwordHash === currentPasswordHash) {
+        const newPasswordHash = await hashPassword(newPassword);
+        await userRef.child('profile/passwordHash').set(newPasswordHash);
+        
+        alert('Passwort wurde erfolgreich geändert.');
+        closeModal('settingsModal');
+        
+        // Clear form
+        document.getElementById('currentPassword').value = '';
+        document.getElementById('newPassword').value = '';
+        document.getElementById('confirmPassword').value = '';
+      } else {
+        alert('Aktuelles Passwort ist falsch.');
+      }
+    }
+  } catch (error) {
+    console.error('Error changing password:', error);
+    alert('Fehler beim Ändern des Passworts.');
+  }
+}
+
+async function updateQuotaSettings() {
+  const newQuota = document.getElementById('quotaSettings').value;
+  
+  if (newQuota < 0 || newQuota > 100) {
+    alert('Quote muss zwischen 0 und 100% liegen.');
+    return;
+  }
+  
+  try {
+    // Update quota for all employees
+    const usersSnapshot = await database.ref('users').once('value');
+    const users = usersSnapshot.val() || {};
+    
+    const updates = {};
+    Object.keys(users).forEach(userId => {
+      if (users[userId].profile && users[userId].profile.role === 'employee') {
+        updates[`users/${userId}/profile/quota`] = parseInt(newQuota);
+      }
+    });
+    
+    await database.ref().update(updates);
+    alert('Standard-Quote wurde für alle Mitarbeiter aktualisiert.');
+    
+  } catch (error) {
+    console.error('Error updating quota:', error);
+    alert('Fehler beim Aktualisieren der Quote.');
+  }
+}
+
+function confirmAccountDeletion() {
+  if (confirm('Möchten Sie Ihren Account wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.')) {
+    deleteCurrentUserAccount();
+  }
+}
+
+async function deleteCurrentUserAccount() {
+  try {
+    await database.ref(`users/${currentUser.id}`).remove();
+    await database.ref(`plans/${currentUser.id}`).remove();
+    
+    alert('Ihr Account wurde gelöscht.');
+    logout();
+    
+  } catch (error) {
+    console.error('Error deleting account:', error);
+    alert('Fehler beim Löschen des Accounts.');
+  }
+}
+
+// Modal Functions
+function closeModal(modalId) {
+  document.getElementById(modalId).classList.add('hidden');
+  
+  // Clear error messages
+  const errorElements = document.querySelectorAll('.error-message');
+  errorElements.forEach(element => {
+    element.classList.add('hidden');
+    element.textContent = '';
+  });
+}
+
+// Utility Functions
+function showError(element, message) {
+  if (element) {
+    element.textContent = message;
+    element.classList.remove('hidden');
+  }
+}
+
+function showLoading(show) {
+  const loader = document.getElementById('loadingIndicator');
+  if (loader) {
+    if (show) {
+      loader.classList.remove('hidden');
+    } else {
+      loader.classList.add('hidden');
+    }
+  }
+}
+
+function updateConnectionStatus() {
+  const statusElement = document.getElementById('connectionStatus');
+  const messageElement = document.getElementById('connectionMessage');
+  
+  if (statusElement && messageElement) {
+    if (isOnline && isFirebaseInitialized) {
+      statusElement.className = 'connection-status connected';
+      messageElement.textContent = 'Online';
+      statusElement.classList.add('hidden'); // Hide when online
+    } else {
+      statusElement.className = 'connection-status offline';
+      messageElement.textContent = isFirebaseInitialized ? 'Offline-Modus' : 'Verbindungsfehler';
+      statusElement.classList.remove('hidden');
+    }
+  }
+}
+
+function formatDate(dateString) {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('de-DE', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+}
+
+// Event Listeners for modals (close on outside click)
+document.addEventListener('click', function(event) {
+  if (event.target.classList.contains('modal')) {
+    const modalId = event.target.id;
+    closeModal(modalId);
+  }
+});
+
+// Back to calendar from team overview
+document.addEventListener('keydown', function(event) {
+  if (event.key === 'Escape') {
+    // Close any open modal
+    const openModals = document.querySelectorAll('.modal:not(.hidden)');
+    openModals.forEach(modal => {
+      closeModal(modal.id);
+    });
+    
+    // Return to calendar view if in team overview
+    if (currentUser && !document.getElementById('teamOverviewPanel').classList.contains('hidden')) {
+      document.getElementById('teamOverviewPanel').classList.add('hidden');
+      document.getElementById('calendarView').classList.remove('hidden');
+    }
+  }
+});
+
+// Auto-sync when coming back online
+window.addEventListener('online', function() {
+  if (currentUser) {
+    // Sync local data when coming back online
+    syncLocalData();
+  }
+});
+
+async function syncLocalData() {
+  if (!currentUser || Object.keys(localData).length === 0) return;
+  
+  try {
+    const updates = {};
+    
+    if (localData[currentUser.id]) {
+      Object.keys(localData[currentUser.id]).forEach(monthKey => {
+        Object.keys(localData[currentUser.id][monthKey]).forEach(dayKey => {
+          updates[`plans/${currentUser.id}/${monthKey}/${dayKey}`] = localData[currentUser.id][monthKey][dayKey];
+        });
+      });
+    }
+    
+    if (Object.keys(updates).length > 0) {
+      await database.ref().update(updates);
+      localData = {}; // Clear local data after sync
+      console.log('Local data synced successfully');
+    }
+    
+  } catch (error) {
+    console.error('Error syncing local data:', error);
+  }
+}
