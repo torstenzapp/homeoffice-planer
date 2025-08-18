@@ -893,6 +893,99 @@ select.form-control {
   gap: var(--space-8);
 }
 
+/* Dashboard */
+.dashboard {
+  max-width: var(--container-lg);
+  margin: 0 auto;
+  padding: var(--space-24) var(--space-16);
+}
+
+.dashboard-content {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  padding: var(--space-24);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: var(--space-24);
+}
+
+.dashboard-content h3 {
+  margin-bottom: var(--space-20);
+  color: var(--color-text);
+}
+
+.progress-container {
+  margin-bottom: var(--space-24);
+}
+
+.progress-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-12);
+}
+
+.progress-label {
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text);
+}
+
+.progress-percent {
+  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-lg);
+  color: var(--color-primary);
+}
+
+.progress-bar {
+  width: 100%;
+  height: 24px;
+  background-color: var(--color-secondary);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  position: relative;
+}
+
+.progress-fill {
+  height: 100%;
+  background-color: var(--color-success);
+  transition: width 0.3s ease;
+  border-radius: var(--radius-full);
+}
+
+.progress-fill.warning {
+  background-color: var(--color-warning);
+}
+
+.progress-fill.danger {
+  background-color: var(--color-error);
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: var(--space-16);
+}
+
+.stat-item {
+  text-align: center;
+  padding: var(--space-16);
+  background: var(--color-bg-2);
+  border-radius: var(--radius-base);
+}
+
+.stat-number {
+  display: block;
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary);
+  margin-bottom: var(--space-4);
+}
+
+.stat-label {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-medium);
+}
+
 /* Team Navigation */
 .team-nav {
   background: var(--color-surface);
@@ -1343,6 +1436,10 @@ select.form-control {
     flex-direction: column;
     align-items: flex-start;
     gap: var(--space-8);
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
   }
 }
 
