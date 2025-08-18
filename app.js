@@ -108,7 +108,7 @@ class HomeOfficePlanner {
         this.newPasswordDefault = "NeuesPasswort123";
 
         // Application state
-        this.colleagues = ["Torsten", "Anna", "Michael", "Sarah", "Thomas"];
+        this.colleagues = ["Torsten", "Tester"];
         this.currentUser = null;
         this.userRole = null;
         this.currentDate = new Date();
