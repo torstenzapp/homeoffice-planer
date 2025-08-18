@@ -29,7 +29,7 @@ class HomeOfficePlanner {
         // Das Frontend sollte niemals Passwörter kennen.
 
         // Application state
-        this.colleagues = ["Torsten Zapp", "TestUser"];
+        this.colleagues = ["Torsten", "Anna", "Michael", "Sarah", "Thomas"];
         this.currentUser = null;
         this.userRole = null;
         this.currentDate = new Date();
