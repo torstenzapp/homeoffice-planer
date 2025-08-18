@@ -60,7 +60,7 @@ const statusTypes = {
 };
 
 // Default users
-const defaultUsers = ["Torsten", "Anna", "Michael", "Sarah", "Thomas"];
+const defaultUsers = ["Torsten Zapp", "Anna", "Michael", "Sarah", "Thomas"];
 
 // SHA-256 Hash function
 async function hashPassword(password) {
