@@ -20,9 +20,9 @@ let localData = {};
 let isFirebaseInitialized = false;
 
 // KORREKTUR: Globales Array für Kollegen (FIX für Problem 1)
-let colleagues = ['Torsten', 'Anna', 'Michael', 'Sarah', 'Thomas'];
+let colleagues = ['Torsten Zapp', 'Anna', 'Michael', 'Sarah', 'Thomas']; 
 let userData = {
-  'Torsten': { password: 'password123_hash', quota: 40 },
+  'Torsten Zapp': { password: 'password123_hash', quota: 40 },
   'Anna': { password: 'password123_hash', quota: 40 },
   'Michael': { password: 'password123_hash', quota: 40 },
   'Sarah': { password: 'password123_hash', quota: 40 },
