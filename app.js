@@ -6,7 +6,47 @@ class HomeOfficePlanner {
         this.database = null;
         this.currentUserUID = null;
         this.dataListeners = new Map(); // Track active listeners
-        
+
+        // ass.js  – Firebase einmalig initialisieren und global bereitstellen
+// Nutzt ES-Module. In deiner index.html so einbinden:
+// <script type="module" src="./ass.js"></script>
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getDatabase } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+// >>> Deine Firebase-Konfiguration
+const firebaseConfig = {
+  apiKey: "AIzaSyDdLYCXvtuXPUhehE-QfqaXWRfseGfwzf4",
+  authDomain: "homeoffice-planer-drv.firebaseapp.com",
+  databaseURL: "https://homeoffice-planer-drv-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "homeoffice-planer-drv",
+  storageBucket: "homeoffice-planer-drv.firebasestorage.app",
+  messagingSenderId: "669565818222",
+  appId: "1:669565818222:web:9eb342704c1a74c5eedd7f"
+};
+
+// Schutz: nur einmal initialisieren
+function initFirebaseOnce() {
+  if (window.firebaseDB) {
+    console.log("Firebase bereits initialisiert.");
+    return window.firebaseDB;
+  }
+  try {
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    window.firebaseDB = db; // <- von deiner App erwartet
+    console.log("✅ Firebase verbunden.");
+    return db;
+  } catch (err) {
+    console.error("❌ Firebase-Init fehlgeschlagen:", err);
+    return null;
+  }
+}
+
+initFirebaseOnce();
+
+// Export leer halten (damit es ein Modul bleibt)
+export {};
         // Extended holidays data through 2030
         this.holidays = {
             "2025": [
