@@ -1,11 +1,10 @@
-// firebase-config.sample.js
-// 👉 Kopieren, Werte einsetzen, als firebase-config.js speichern
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
 
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
-import { getAuth } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
-import { getDatabase } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
-
-export const firebaseConfig = {
+// Your web app's Firebase configuration
+const firebaseConfig = {
   apiKey: "AIzaSyDdLYCXvtuXPUhehE-QfqaXWRfseGfwzf4",
   authDomain: "homeoffice-planer-drv.firebaseapp.com",
   databaseURL: "https://homeoffice-planer-drv-default-rtdb.europe-west1.firebasedatabase.app",
@@ -13,9 +12,7 @@ export const firebaseConfig = {
   storageBucket: "homeoffice-planer-drv.firebasestorage.app",
   messagingSenderId: "669565818222",
   appId: "1:669565818222:web:9eb342704c1a74c5eedd7f"
-}; 
+};
 
-export const auth = getAuth(firebaseApp);
-export const db = getDatabase(firebaseApp);
-
-
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
