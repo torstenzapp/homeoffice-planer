@@ -5,15 +5,17 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/fireba
 import { getAuth } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { getDatabase } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
 
-export const firebaseApp = initializeApp({
-  apiKey: "__API_KEY__",
-  authDomain: "__AUTH_DOMAIN__",
-  databaseURL: "__DATABASE_URL__",
-  projectId: "__PROJECT_ID__",
-  storageBucket: "__STORAGE_BUCKET__",
-  messagingSenderId: "__MSG_SENDER_ID__",
-  appId: "__APP_ID__"
-});
+export const firebaseConfig = {
+  apiKey: "AIzaSyDdLYCXvtuXPUhehE-QfqaXWRfseGfwzf4",
+  authDomain: "homeoffice-planer-drv.firebaseapp.com",
+  databaseURL: "https://homeoffice-planer-drv-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "homeoffice-planer-drv",
+  storageBucket: "homeoffice-planer-drv.firebasestorage.app",
+  messagingSenderId: "669565818222",
+  appId: "1:669565818222:web:9eb342704c1a74c5eedd7f"
+}; 
 
 export const auth = getAuth(firebaseApp);
 export const db = getDatabase(firebaseApp);
+
+
