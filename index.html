@@ -10,9 +10,9 @@
     <link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iOCIgZmlsbD0iIzIxN0E4RCIvPgo8dGV4dCB4PSIxNiIgeT0iMjIiIGZvbnQtZmFtaWx5PSJzYW5zLXNlcmlmIiBmb250LXNpemU9IjE4IiBmb250LXdlaWdodD0iYm9sZCIgZmlsbD0id2hpdGUiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkg8L3RleHQ+Cjwvc3ZnPg==" type="image/svg+xml">
 </head>
 <body>
-    <!-- Login Screen -->
+    <!-- Login Screen - Fixed centering -->
     <div id="loginScreen" class="login-screen">
-        <div class="container">
+        <div class="login-container">
             <div class="login-card">
                 <div class="login-header">
                     <h1>🏠 Home-Office-Planer</h1>
@@ -201,6 +201,14 @@
                                     <span class="legend-color" style="background: #808080;"></span>
                                     <span>⏰ AZ</span>
                                 </div>
+                                <div class="legend-item">
+                                    <span class="legend-color" style="background: #FF6B35;"></span>
+                                    <span>🌡️ Hitze-HO</span>
+                                </div>
+                                <div class="legend-item">
+                                    <span class="legend-color" style="background: #9B59B6;"></span>
+                                    <span>🚌 Betriebsausflug</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -243,8 +251,10 @@
                                     <label class="form-label">Monat auswählen</label>
                                     <input type="month" id="reportMonth" class="form-control">
                                 </div>
-                                <button class="btn btn--primary" id="generateReport">Bericht erstellen</button>
-                                <button class="btn btn--secondary" id="exportData">Daten exportieren</button>
+                                <div class="form-buttons">
+                                    <button class="btn btn--primary" id="generateReport">Bericht erstellen</button>
+                                    <button class="btn btn--secondary" id="exportData">Daten exportieren</button>
+                                </div>
                                 <div id="reportContent" class="report-content"></div>
                             </div>
                         </div>
@@ -313,7 +323,7 @@
         </div>
     </div>
 
-    <!-- Status Selection Modal -->
+    <!-- Status Selection Modal - Extended with new options -->
     <div id="statusModal" class="modal hidden">
         <div class="modal-content">
             <div class="modal-header">
@@ -337,6 +347,14 @@
                     <button class="status-option" data-status="az">
                         <span class="status-symbol">⏰</span>
                         <span class="status-name">AZ</span>
+                    </button>
+                    <button class="status-option" data-status="hitze_ho">
+                        <span class="status-symbol">🌡️</span>
+                        <span class="status-name">Hitze-HO</span>
+                    </button>
+                    <button class="status-option" data-status="betriebsausflug">
+                        <span class="status-symbol">🚌</span>
+                        <span class="status-name">Betriebsausflug</span>
                     </button>
                     <button class="status-option" data-status="">
                         <span class="status-symbol">❌</span>

@@ -1,0 +1,61 @@
+{
+  "name": "HomeOffice-Planer DRV Saarland",
+  "short_name": "HO-Planer",
+  "description": "Sicherer Home-Office-Planer mit Live-Synchronisierung für DRV Saarland",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#217A8D",
+  "background_color": "#ffffff",
+  "scope": "/",
+  "lang": "de",
+  "categories": ["productivity", "business"],
+  "screenshots": [
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIwIiBoZWlnaHQ9IjUzNiIgdmlld0JveD0iMCAwIDMyMCA1MzYiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMjAiIGhlaWdodD0iNTM2IiBmaWxsPSIjZjVmNWY1Ii8+Cjx0ZXh0IHg9IjE2MCIgeT0iMjY4IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjQiIGZpbGw9IiMyMTdBOEQiIHRleHQtYW5jaG9yPSJtaWRkbGUiPkhvbWVPZmZpY2UtUGxhbmVyPC90ZXh0Pgo8L3N2Zz4K",
+      "sizes": "320x536",
+      "type": "image/svg+xml",
+      "form_factor": "narrow"
+    }
+  ],
+  "icons": [
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgdmlld0JveD0iMCAwIDE5MiAxOTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxOTIiIGhlaWdodD0iMTkyIiByeD0iNDAiIGZpbGw9IiMyMTdBOEQiLz4KPHN2ZyB4PSI0MCIgeT0iNDAiIHdpZHRoPSIxMTIiIGhlaWdodD0iMTEyIiB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9Im5vbmUiPgo8cGF0aCBkPSJNMTAgMjBWMTRIMTRWMjBIMTlWMTJIMjJMMTIgM0wyIDEySFYyMEgxMFoiIGZpbGw9IndoaXRlIi8+CjwvU3ZnPgo8L3N2Zz4K",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgdmlld0JveD0iMCAwIDUxMiA1MTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiByeD0iMTAwIiBmaWxsPSIjMjE3QThEIi8+Cjxzdmcgej0iMTAwIiB5PSIxMDAiIHdpZHRoPSIzMTIiIGhlaWdodD0iMzEyIiB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9Im5vbmUiPgo8cGF0aCBkPSJNMTAgMjBWMTRIMTRWMjBIMTlWMTJIMjJMMTIgM0wyIDEySFYyMEgxMFoiIGZpbGw9IndoaXRlIi8+CjwvU3ZnPgo8L3N2Zz4K",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Kalender öffnen",
+      "short_name": "Kalender",
+      "description": "Direkt zum Kalender",
+      "url": "/?view=calendar",
+      "icons": [
+        {
+          "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iOTYiIGhlaWdodD0iOTYiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMTkgM0g1QzMuOSAzIDMgMy45IDMgNVYxOUMzIDIwLjEgMy45IDIxIDUgMjFIMTlDMjAuMSAyMSAyMSAyMC4xIDIxIDE5VjVDMjEgMy45IDIwLjEgMyAxOSAzWk0xOSAxOUg1VjhIMTlWMTlaIiBmaWxsPSIjMjE3QThEIi8+PC9zdmc+",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Statistiken",
+      "short_name": "Stats",
+      "description": "Dashboard anzeigen",
+      "url": "/?view=dashboard",
+      "icons": [
+        {
+          "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iOTYiIGhlaWdodD0iOTYiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMyAxM0g1VjE5SDNWMTNaTTkgOUgxMVYxOUg5VjlaTTE1IDVIMTdWMTlIMTVWNVoiIGZpbGw9IiMyMTdBOEQiLz48L3N2Zz4K",
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ]
+}
